@@ -31,6 +31,7 @@ const HostView = ({ roomCode, user, setView }) => {
   const [scores, setScores] = useState({}); // cross-game global scores
   const [isTournament, setIsTournament] = useState(false);
   const [tournamentCount, setTournamentCount] = useState(0);
+  const [activeReactions, setActiveReactions] = useState([]);
 
   useEffect(() => {
     const roomRef = ref(db, `rooms/${roomCode}`);
@@ -50,6 +51,20 @@ const HostView = ({ roomCode, user, setView }) => {
         }
         if (data.globalScores) {
           setScores(data.globalScores);
+        }
+        if (data.reactions) {
+          const list = Object.entries(data.reactions).map(([id, r]) => ({ id, ...r }));
+          setActiveReactions(list);
+          // Cleanup old reactions from DB after 3s
+          setTimeout(() => {
+            list.forEach(r => {
+              if (Date.now() - parseInt(r.id) > 2000) {
+                set(ref(db, `rooms/${roomCode}/reactions/${r.id}`), null);
+              }
+            });
+          }, 2500);
+        } else {
+          setActiveReactions([]);
         }
       }
     });
@@ -331,89 +346,83 @@ const HostView = ({ roomCode, user, setView }) => {
       </div>
 
       <style>{`
-        .lobby-view { width: 100vw; height: 100vh; padding: 40px; }
-        .lobby-container { width: 100%; height: 100%; display: flex; flex-direction: column; padding: 30px; gap: 30px; }
+        .lobby-view { width: 100vw; height: 100vh; padding: 30px; }
+        .lobby-container { width: 100%; height: 100%; display: flex; flex-direction: column; padding: 25px; gap: 20px; }
         .lobby-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .room-badge h1 { font-size: 5rem; margin-top: -10px; }
-        .label { font-size: 0.9rem; font-weight: 800; color: var(--text-dim); letter-spacing: 2px; }
+        .room-badge h1 { font-size: 4rem; margin-top: -5px; line-height: 1; }
+        .label { font-size: 0.8rem; font-weight: 800; color: var(--text-dim); letter-spacing: 2px; }
 
-        .lobby-main { display: grid; grid-template-columns: 350px 1fr 350px; gap: 30px; flex: 1; min-height: 0; }
+        .lobby-main { display: grid; grid-template-columns: 280px 1fr 340px; gap: 20px; flex: 1; min-height: 0; }
         
-        /* Left Section */
-        .lobby-left { display: flex; flex-direction: column; gap: 30px; }
-        .qr-container { padding: 30px; text-align: center; }
-        .qr-hint { margin-top: 15px; font-weight: 600; color: var(--text-dim); }
-        .leaderboard-section { flex: 1; display: flex; flex-direction: column; gap: 15px; }
-        .leaderboard-list { display: flex; flex-direction: column; gap: 8px; }
-        .leaderboard-item { display: flex; padding: 12px 20px; background: rgba(255,255,255,0.05); border-radius: 12px; align-items: center; }
-        .rank { width: 40px; font-weight: 800; color: var(--accent-primary); }
-        .name { flex: 1; font-weight: 600; }
+        /* Sections */
+        .lobby-left, .lobby-center, .lobby-right { display: flex; flex-direction: column; gap: 20px; min-height: 0; }
+
+        /* Left Column */
+        .qr-container { padding: 20px; text-align: center; }
+        .qr-container svg { width: 100% !important; height: auto !important; max-width: 200px; margin: 0 auto; }
+        .qr-hint { margin-top: 10px; font-size: 0.8rem; color: var(--text-dim); }
+        .leaderboard-section { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+        .leaderboard-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .leaderboard-item { display: flex; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 12px; align-items: center; font-size: 0.9rem; }
+        .rank { width: 35px; font-weight: 800; color: var(--accent-primary); }
+        .name { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
         .score { font-weight: 800; color: var(--accent-secondary); }
 
-        /* Center Section */
-        .lobby-center { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-        .game-grid-container { flex: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
-        .games-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; overflow-y: auto; padding-right: 15px; flex: 1; }
-        .game-card { padding: 25px; cursor: pointer; display: flex; align-items: center; gap: 20px; position: relative; border-color: rgba(255,255,255,0.05); }
-        .game-card.active { border-color: var(--accent-primary); background: rgba(0, 242, 255, 0.05); }
-        .game-card .icon { color: var(--accent-primary); }
-        .game-card h4 { font-size: 1.5rem; margin-bottom: 5px; }
-        .game-card p { color: var(--text-dim); font-size: 0.9rem; }
-        .active-glow { position: absolute; inset: 0; border: 2px solid var(--accent-primary); border-radius: 20px; box-shadow: 0 0 20px rgba(0, 242, 255, 0.3); pointer-events: none; }
-
-        /* Right Section */
-        .lobby-right { }
-        .players-container { height: 100%; display: flex; flex-direction: column; padding: 25px; gap: 20px; }
-        .players-list-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 10px; }
-        .player-row { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 15px; }
-        .avatar { width: 45px; height: 45px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; border: 2px solid rgba(255,255,255,0.2); overflow: hidden; }
-        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-        .player-name { flex: 1; font-weight: 600; font-size: 1.1rem; }
-        .player-points { font-weight: 800; background: var(--accent-secondary); padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; }
-        .start-game-btn { width: 100%; padding: 20px; font-size: 1.5rem; margin-top: auto; }
-
-        .section-title { display: flex; align-items: center; gap: 10px; color: var(--text-dim); }
-        .section-title h3 { font-size: 1rem; font-weight: 800; letter-spacing: 2px; }
-
-        /* Playground */
-        .playground-container { height: 100%; display: flex; flex-direction: column; gap: 20px; padding: 25px; }
-        .playground-area { flex: 1; background: rgba(0,0,0,0.3); border-radius: 30px; position: relative; overflow: hidden; border: 2px dashed rgba(255,255,255,0.05); }
-        .lobby-avatar { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -50%); }
-        .avatar-body { width: 70px; height: 70px; border-radius: 20px; border: 4px solid; background: #222; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; overflow: hidden; }
+        /* Center Column - Playground */
+        .playground-container { flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 15px; }
+        .playground-area { flex: 1; background: rgba(0,0,0,0.2); border-radius: 30px; position: relative; overflow: hidden; border: 2px dashed rgba(255,255,255,0.05); }
+        .lobby-avatar { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 5px; transform: translate(-50%, -50%); z-index: 10; }
+        .avatar-body { width: 60px; height: 60px; border-radius: 18px; border: 3px solid; background: #111; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 900; overflow: hidden; }
         .avatar-body img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar-label { font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 5px; color: black; }
+        .avatar-label { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; color: black; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        .lobby-controls { height: 70%; display: flex; flex-direction: column; gap: 20px; padding: 20px; }
-        .mode-toggle { display: grid; grid-template-columns: 1fr 1fr; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 12px; }
-        .mode-btn { padding: 10px; border: none; background: transparent; color: var(--text-dim); font-weight: 800; font-size: 0.8rem; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        /* Right Column - Controls & Players */
+        .lobby-controls { flex: 2; display: flex; flex-direction: column; gap: 15px; padding: 15px; min-height: 0; }
+        .mode-toggle { display: grid; grid-template-columns: 1fr 1fr; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 12px; }
+        .mode-btn { padding: 8px; border: none; background: transparent; color: var(--text-dim); font-weight: 800; font-size: 0.7rem; border-radius: 9px; cursor: pointer; transition: all 0.2s; }
         .mode-btn.active { background: var(--accent-primary); color: black; }
         
-        .games-grid { display: grid; grid-template-columns: 1fr; gap: 10px; overflow-y: auto; flex: 1; padding-right: 5px; }
-        .game-card { padding: 15px; border-radius: 15px; }
-        .game-card h4 { font-size: 1rem; }
-        .start-game-btn { padding: 15px; font-size: 1.2rem; }
-        .start-game-btn.tournament { background: linear-gradient(135deg, #ffd700, #ff8800); color: black; border: none; }
+        .game-grid-container { flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 5px; }
+        .games-grid { flex: 1; display: grid; grid-template-columns: 1fr; gap: 8px; overflow-y: auto; padding-right: 8px; }
+        .game-card { padding: 12px; border-radius: 12px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .game-card.active { border-color: var(--accent-primary); background: rgba(0, 242, 255, 0.05); }
+        .game-card h4 { font-size: 0.85rem; font-weight: 700; }
+        .active-glow { position: absolute; inset: 0; border: 2px solid var(--accent-primary); border-radius: 12px; pointer-events: none; opacity: 0.3; }
 
-        .players-container.mini { flex: 1; margin-top: 20px; padding: 15px; height: auto; }
-        .player-row-mini { display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 10px; margin-bottom: 5px; }
-        .avatar-mini { width: 30px; height: 30px; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; }
-        .avatar-mini img { width: 100%; height: 100%; object-fit: cover; }
-        .p-name { font-size: 0.9rem; font-weight: 600; }
-
-        .tournament-info { flex: 1; text-align: center; gap: 20px; }
-        .t-rules { text-align: left; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; list-style: none; font-weight: 700; color: #ffd700; width: 80%; }
+        .tournament-info { flex: 1; text-align: center; gap: 15px; padding: 10px; }
+        .t-rules { text-align: left; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; list-style: none; font-size: 0.8rem; font-weight: 700; color: #ffd700; }
         .t-rules li::before { content: "★ "; }
 
-        .tournament-celebration { position: absolute; inset: 50px; z-index: 10000; background: rgba(0,0,0,0.9); border: 8px solid #ffd700; }
-        .champion-reveal { margin-top: 30px; gap: 20px; }
-        .champ-avatar { width: 150px; height: 150px; border-radius: 40px; border: 6px solid; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 5rem; font-weight: 900; }
+        .start-game-btn { width: 100%; padding: 14px; font-size: 1.1rem; border-radius: 12px; margin-top: auto; }
+        .start-game-btn.tournament { background: linear-gradient(135deg, #ffd700, #ff8800); color: black; border: none; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+
+        .players-container.mini { flex: 1; padding: 15px; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+        .players-list-scroll { flex: 1; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 6px; }
+        .player-row-mini { display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 10px; }
+        .avatar-mini { width: 30px; height: 30px; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; background: #333; }
+        .avatar-mini img { width: 100%; height: 100%; object-fit: cover; }
+        .p-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .section-title { display: flex; align-items: center; justify-content: space-between; color: var(--text-dim); margin-bottom: 5px; }
+        .section-title h3 { font-size: 0.8rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+        .section-title p { font-size: 0.7rem; opacity: 0.7; }
+
+        /* Shared Components */
+        .reaction-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1000; }
+        .floating-reaction { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .r-bubble { font-size: 2.5rem; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 50%; border: 2px solid; backdrop-filter: blur(8px); }
+        .r-sender { font-size: 0.7rem; font-weight: 800; background: rgba(0,0,0,0.8); padding: 2px 8px; border-radius: 6px; color: white; }
+
+        .tournament-celebration { position: absolute; inset: 40px; z-index: 10000; background: rgba(0,0,0,0.95); border: 8px solid #ffd700; border-radius: 40px; }
+        .champion-reveal { margin-top: 30px; gap: 20px; text-align: center; }
+        .champ-avatar { width: 180px; height: 180px; border-radius: 40px; border: 8px solid; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 6rem; font-weight: 900; background: #111; }
         .champ-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD */
-        .game-view { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+        /* HUD & Transitions */
+        .game-view { width: 100vw; height: 100vh; position: relative; overflow: hidden; background: #050505; }
         .game-hud { position: absolute; top: 20px; right: 20px; z-index: 9999; }
-        .game-hud .neon-button { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-        .active-game-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .game-hud .neon-button { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); }
+        .active-game-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 30px; }
       `}</style>
     </div>
   );

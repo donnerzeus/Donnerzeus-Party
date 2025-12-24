@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator } from 'lucide-react';
 
 const ControllerView = ({ roomCode, user, setView }) => {
     const [name, setName] = useState('');
@@ -173,6 +173,16 @@ const ControllerView = ({ roomCode, user, setView }) => {
             if (val === 2) nextX = Math.max(0, nextX - step);
             if (val === 3) nextX = Math.min(100, nextX + step);
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { lobbyX: nextX, lobbyY: nextY });
+            return;
+        }
+
+        if (type === 'reaction') {
+            const reactionId = Date.now();
+            update(ref(db, `rooms/${roomCode}/reactions/${reactionId}`), {
+                emoji: val,
+                sender: playerData?.name || '?',
+                color: playerData?.color || '#fff'
+            });
             return;
         }
 
@@ -354,6 +364,17 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                         <button className="arrow-btn" onClick={() => handleAction('move', 3)}><ArrowRight /></button>
                                     </div>
                                     <button className="arrow-btn" onClick={() => handleAction('move', 1)}><ArrowDown /></button>
+                                </div>
+
+                                <div className="lobby-actions-row">
+                                    {!sensorsActive && (
+                                        <button className="neon-button mini sensor-btn" onClick={requestSensorPermission}>
+                                            <Compass size={18} /> ENABLE MOTION
+                                        </button>
+                                    )}
+                                    <button className="neon-button mini react-btn" onClick={() => handleAction('reaction', '🔥')}>
+                                        <Smile size={18} /> REACTION
+                                    </button>
                                 </div>
                             </div>
                         ) : (
@@ -724,6 +745,9 @@ const ControllerView = ({ roomCode, user, setView }) => {
 
                 .lobby-arrows { margin-top: 30px; scale: 1.2; }
                 .lobby-icon-center { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; color: var(--accent-primary); background: rgba(0,242,255,0.1); border-radius: 50%; }
+                .lobby-actions-row { display: flex; gap: 10px; margin-top: 20px; }
+                .sensor-btn { background: #ffaa00; color: black; border: none; }
+                .react-btn { background: rgba(255,255,255,0.1); }
 
                 .input-progress { display: flex; gap: 10px; margin-top: 20px; }
                 .input-progress .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.2); }
