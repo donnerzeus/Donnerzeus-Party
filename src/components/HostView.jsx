@@ -12,6 +12,8 @@ import QuickDraw from './games/QuickDraw';
 import HotPotato from './games/HotPotato';
 import Steering from './games/Steering';
 import ShakeIt from './games/ShakeIt';
+import TugOfWar from './games/TugOfWar';
+import LavaJump from './games/LavaJump';
 
 const HostView = ({ roomCode, user, setView }) => {
   const [players, setPlayers] = useState([]);
@@ -92,6 +94,8 @@ const HostView = ({ roomCode, user, setView }) => {
     { id: 'hot-potato', name: 'Hot Potato', icon: Bomb, desc: 'Pass the bomb before it explodes!' },
     { id: 'steering', name: 'Steering', icon: Compass, desc: 'Work together to guide the orb!' },
     { id: 'shake-it', name: 'Shake It!', icon: Zap, desc: 'Shake your phone like crazy!' },
+    { id: 'tug-of-war', name: 'Tug of War', icon: Swords, desc: 'Mash together to pull the rope!' },
+    { id: 'lava-jump', name: 'Lava Jump', icon: Flame, desc: 'Jump over fire obstacles!' },
   ];
 
   if (status === 'playing') {
@@ -112,6 +116,8 @@ const HostView = ({ roomCode, user, setView }) => {
           {gameType === 'hot-potato' && <HotPotato players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'steering' && <Steering players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'shake-it' && <ShakeIt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'tug-of-war' && <TugOfWar players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'lava-jump' && <LavaJump players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
         </div>
       </div>
     );

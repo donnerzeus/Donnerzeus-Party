@@ -115,6 +115,14 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 const other = Object.keys(roomData.players).filter(id => id !== user.uid);
                 if (other.length > 0) update(ref(db, `rooms/${roomCode}`), { bombHolderId: other[Math.floor(Math.random() * other.length)] });
             }
+        } else if (roomData.gameType === 'tug-of-war') {
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { score: (playerData?.score || 0) + 1 });
+        } else if (roomData.gameType === 'lava-jump') {
+            // Instant jump action
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { action: 'jump' });
+            setTimeout(() => {
+                update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { action: 'idle' });
+            }, 500);
         }
     };
 
@@ -279,6 +287,33 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                         {!sensorsActive && <button className="neon-button" style={{ marginTop: 20 }} onClick={requestSensorPermission}>ENABLE SENSORS</button>}
                                     </div>
                                 )}
+
+                                {roomData.gameType === 'tug-of-war' && (
+                                    <div className="tug-ui center-all">
+                                        <div className={`team-indicator ${playerData?.team}`}>TEAM {playerData?.team?.toUpperCase()}</div>
+                                        <motion.button
+                                            whileTap={{ scale: 0.9 }}
+                                            className={`action-circle pull-btn ${playerData?.team}`}
+                                            onClick={handleAction}
+                                        >
+                                            PULL!!!
+                                        </motion.button>
+                                        <p>Tap as fast as you can to win!</p>
+                                    </div>
+                                )}
+
+                                {roomData.gameType === 'lava-jump' && (
+                                    <div className="lava-ui center-all">
+                                        <motion.button
+                                            whileTap={{ scale: 0.8 }}
+                                            className="action-circle jump-btn"
+                                            onClick={handleAction}
+                                        >
+                                            JUMP!
+                                        </motion.button>
+                                        <p>Watch the screen and jump over fire!</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -327,6 +362,15 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .progress-bar-container { width: 100%; height: 30px; background: rgba(0,0,0,0.3); border-radius: 15px; margin: 30px 0; border: 2px solid var(--glass-border); overflow: hidden; }
                 .progress-fill { height: 100%; background: linear-gradient(90deg, #ffaa00, #ff00aa); transition: width 0.1s; }
                 .cd { font-size: 2rem; font-weight: 900; }
+
+                .team-indicator { font-size: 1.5rem; font-weight: 900; margin-bottom: 20px; padding: 10px 30px; border-radius: 15px; }
+                .team-indicator.red { background: rgba(255,0,0,0.2); color: #ff4444; border: 2px solid #ff4444; }
+                .team-indicator.blue { background: rgba(0,0,255,0.2); color: #4444ff; border: 2px solid #4444ff; }
+                
+                .pull-btn.red { background: #ff4444; box-shadow: 0 0 30px rgba(255,68,68,0.5); }
+                .pull-btn.blue { background: #4444ff; box-shadow: 0 0 30px rgba(68,68,255,0.5); }
+                
+                .jump-btn { background: #ff8800; box-shadow: 0 0 30px rgba(255,136,0,0.5); }
             `}</style>
         </div>
     );
