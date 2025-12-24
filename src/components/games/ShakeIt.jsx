@@ -22,7 +22,6 @@ const ShakeIt = ({ players, roomCode, onGameOver }) => {
     }, [countdown, phase, roomCode]);
 
     useEffect(() => {
-        // Find the winner (first to 100 shakes)
         const winThreshold = 100;
         const winnerPlayer = players.find(p => (p.shakeCount || 0) >= winThreshold);
         if (winnerPlayer && phase === 'shaking') {
@@ -52,12 +51,16 @@ const ShakeIt = ({ players, roomCode, onGameOver }) => {
                                     <div className="bottle-container">
                                         <motion.div
                                             className="foam"
-                                            style={{ backgroundColor: p.color, height: `${Math.min(100, (p.shakeCount || 0))}%` }}
-                                            animate={{ y: [0, -5, 0] }}
-                                            transition={{ repeat: Infinity, duration: 0.1 }}
+                                            style={{
+                                                backgroundColor: p.color,
+                                                height: `${Math.min(100, (p.shakeCount || 0))}%`
+                                            }}
+                                            animate={{ y: [0, -2, 0] }}
+                                            transition={{ repeat: Infinity, duration: 0.2 }}
                                         />
+                                        {p.shakeCount >= 100 && <div className="exploded">💥</div>}
                                     </div>
-                                    <div className="count">{p.shakeCount || 0}%</div>
+                                    <div className="count">{Math.min(100, Math.floor(p.shakeCount || 0))}%</div>
                                 </div>
                             ))}
                         </div>
@@ -74,7 +77,7 @@ const ShakeIt = ({ players, roomCode, onGameOver }) => {
             </AnimatePresence>
 
             <style>{`
-                .shake-game { width: 100%; height: 100%; }
+                .shake-game { width: 100%; height: 100%; overflow: hidden; }
                 .big-cd { font-size: 15rem; font-weight: 900; color: var(--accent-primary); line-height: 1; }
                 .shake-arena { width: 100%; }
                 .shake-grid { display: flex; gap: 40px; margin-top: 50px; justify-content: center; width: 100%; flex-wrap: wrap; }
@@ -82,6 +85,8 @@ const ShakeIt = ({ players, roomCode, onGameOver }) => {
                 .player-bottle { display: flex; flex-direction: column; align-items: center; gap: 15px; }
                 .bottle-container { width: 80px; height: 300px; border: 4px solid var(--glass-border); border-radius: 20px; overflow: hidden; position: relative; background: rgba(0,0,0,0.3); }
                 .foam { position: absolute; bottom: 0; left: 0; right: 0; filter: brightness(1.2); box-shadow: 0 0 20px currentColor; }
+                .exploded { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 3rem; animation: pop 0.5s forwards; }
+                @keyframes pop { 0% { scale: 0; } 50% { scale: 1.5; } 100% { scale: 1; } }
                 .bottle-label { font-weight: 800; font-size: 1.2rem; }
                 .count { font-family: monospace; font-weight: 800; color: var(--text-dim); }
                 

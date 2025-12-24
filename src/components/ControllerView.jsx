@@ -54,10 +54,12 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 if (!acc) return;
                 const totalAcc = Math.abs(acc.x || 0) + Math.abs(acc.y || 0) + Math.abs(acc.z || 0);
 
-                if (totalAcc > 20 && Date.now() - lastShake > 100) {
+                if (totalAcc > 25 && Date.now() - lastShake > 100) {
                     lastShake = Date.now();
                     const current = playerData?.shakeCount || 0;
-                    update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { shakeCount: current + 1 });
+                    if (current < 100) {
+                        update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { shakeCount: current + 1 });
+                    }
                     if (navigator.vibrate) navigator.vibrate(40);
                 }
             };
@@ -104,6 +106,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
             if (!playerData?.lastClick) update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { lastClick: Date.now() });
         } else if (roomData.gameType === 'simon-says') {
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { lastMove: val, lastClick: Date.now() });
+        } else if (roomData.gameType === 'quick-draw') {
+            if (roomData.gamePhase === 'voting') {
+                update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { vote: val }); // val is the id of player voted
+            }
         } else if (roomData.gameType === 'hot-potato') {
             if (roomData.bombHolderId === user.uid) {
                 const other = Object.keys(roomData.players).filter(id => id !== user.uid);
@@ -180,20 +186,48 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                 )}
 
                                 {roomData.gameType === 'simon-says' && (
-                                    <div className="simon-grid">
-                                        {[0, 1, 2, 3].map(i => (
-                                            <button key={i} className="simon-pad" style={{ background: ['#ff4444', '#44ff44', '#4444ff', '#ffff44'][i] }} onClick={() => handleAction('simon', i)} />
+                                    <div className="simon-buttons">
+                                        {['#ff4444', '#44ff44', '#4444ff', '#ffff44'].map((c, i) => (
+                                            <button key={i} className="simon-btn" style={{ background: c }} onClick={() => handleAction('simon', i)} />
                                         ))}
                                     </div>
                                 )}
 
                                 {roomData.gameType === 'quick-draw' && (
                                     <div className="draw-interface glass-panel">
-                                        <h3>DRAW: {roomData.currentWord}</h3>
-                                        <div className="canvas-wrapper">
-                                            <canvas ref={canvasRef} width={300} height={400} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
-                                        </div>
-                                        <button className="neon-button secondary mini" onClick={() => canvasRef.current.getContext('2d').clearRect(0, 0, 300, 400)}>CLEAR</button>
+                                        {roomData.gamePhase === 'drawing' ? (
+                                            <>
+                                                <h3>DRAW: {roomData.currentWord}</h3>
+                                                <div className="canvas-wrapper">
+                                                    <canvas ref={canvasRef} width={300} height={400} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
+                                                </div>
+                                                <button className="neon-button secondary mini" onClick={() => canvasRef.current.getContext('2d').clearRect(0, 0, 300, 400)}>CLEAR</button>
+                                            </>
+                                        ) : roomData.gamePhase === 'voting' ? (
+                                            <div className="voting-ui center-all">
+                                                <h3>VOTE FOR BEST!</h3>
+                                                <div className="vote-list">
+                                                    {Object.entries(roomData.players)
+                                                        .filter(([id]) => id !== user.uid)
+                                                        .map(([id, p]) => (
+                                                            <button
+                                                                key={id}
+                                                                className={`neon-button mini ${playerData?.vote === id ? 'active' : ''}`}
+                                                                onClick={() => handleAction('quick-draw', id)}
+                                                                style={{ borderColor: p.color, width: '100%' }}
+                                                            >
+                                                                {p.name}
+                                                            </button>
+                                                        ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="results-waiting center-all">
+                                                <Trophy size={64} className="neon-text" />
+                                                <h3>STAY TUNED!</h3>
+                                                <p>Checking the judges...</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -274,7 +308,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .simon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 300px; height: 300px; }
                 .simon-pad { border-radius: 20px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 
-                .draw-interface { padding: 15px; background: white; color: black; border-radius: 30px; width: 100%; max-width: 320px; }
+                .draw-interface { padding: 15px; background: white; color: black; border-radius: 30px; width: 100%; max-width: 320px; min-height: 450px; }
+                .voting-ui { width: 100%; gap: 10px; }
+                .vote-list { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 20px; }
+                .neon-button.active { background: var(--accent-primary); color: white; }
                 .canvas-wrapper { border: 2px solid #ddd; background: #fff; margin: 10px 0; border-radius: 15px; overflow: hidden; touch-action: none; }
                 canvas { width: 100%; cursor: crosshair; }
 
