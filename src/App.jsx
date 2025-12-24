@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, auth } from './firebase';
-import { ref, set, onValue, push, update } from 'firebase/database';
+import { ref, set, onValue, update } from 'firebase/database';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import HostView from './components/HostView';
 import ControllerView from './components/ControllerView';
-import { Sparkles, Gamepad2, Users, Monitor } from 'lucide-react';
+import { Gamepad2, Users, Monitor } from 'lucide-react';
 
-const VERSION = "v1.0.3";
+const VERSION = "v1.1.0";
 
 function App() {
   const [view, setView] = useState('loading'); // loading, landing, host, controller
@@ -21,7 +21,6 @@ function App() {
       setUser(u);
       setIsAuthReady(true);
 
-      // If we have a room in URL, go straight to controller after auth is ready
       const params = new URLSearchParams(window.location.search);
       const room = params.get('room');
       if (room) {
@@ -51,7 +50,7 @@ function App() {
       host: user.uid,
       status: 'lobby',
       createdAt: Date.now(),
-      gameData: {}
+      gameType: ''
     });
     setView('host');
   };
@@ -67,30 +66,32 @@ function App() {
       <div className="version-tag">{VERSION}</div>
       <AnimatePresence mode="wait">
         {!isAuthReady || view === 'loading' ? (
-          <motion.div key="loading" className="loading-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div key="loading" className="loading-screen center-all" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="spinner"></div>
-            <p>Gathering the party...</p>
+            <p className="neon-text">GATHERING THE PARTY...</p>
           </motion.div>
         ) : view === 'landing' ? (
-          <motion.div key="landing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="landing-page">
-            <div className="hero-section">
-              <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 5 }} className="logo-icon">
-                <Gamepad2 size={80} color="#00f2ff" />
+          <motion.div key="landing" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="landing-page center-all">
+            <div className="hero-section center-all">
+              <motion.div animate={{ rotate: [0, 5, -5, 0], y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="logo-icon">
+                <Gamepad2 size={120} color="#00f2ff" style={{ filter: 'drop-shadow(0 0 20px #00f2ff)' }} />
               </motion.div>
-              <h1 className="neon-text">PARTY GAMES</h1>
-              <p className="subtitle">Transform your phone into a controller!</p>
+              <h1 className="neon-text main-title">DONNERZEUS PARTY</h1>
+              <p className="subtitle">Your phone is the controller. The screen is the playground.</p>
+
               <div className="action-cards">
-                <motion.div whileHover={{ scale: 1.05 }} className="glass-panel action-card" onClick={startHost}>
-                  <Monitor size={48} />
-                  <h3>Host Game</h3>
-                  <p>Display on big screen</p>
+                <motion.div whileHover={{ y: -10, borderColor: '#00f2ff' }} className="glass-panel action-card" onClick={startHost}>
+                  <Monitor size={64} className="icon" />
+                  <h3>HOST GAME</h3>
+                  <p>Display on your TV/Monitor</p>
                 </motion.div>
-                <div className="glass-panel action-card">
-                  <Users size={48} />
-                  <h3>Join Game</h3>
+
+                <div className="glass-panel action-card join-card">
+                  <Users size={64} className="icon" />
+                  <h3>JOIN GAME</h3>
                   <div className="join-input-group">
                     <input type="text" placeholder="CODE" maxLength={4} onChange={(e) => setRoomCode(e.target.value)} className="room-input" />
-                    <button className="neon-button mini" onClick={() => joinRoom(roomCode)}>GO</button>
+                    <button className="neon-button" onClick={() => joinRoom(roomCode)}>JOIN</button>
                   </div>
                 </div>
               </div>
@@ -104,23 +105,52 @@ function App() {
       </AnimatePresence>
 
       <style>{`
-        .app-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; position: relative; }
-        .version-tag { position: absolute; top: 10px; left: 10px; font-size: 0.7rem; color: var(--text-dim); opacity: 0.5; font-family: monospace; z-index: 1000; }
-        .loading-screen { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .spinner { width: 50px; height: 50px; border: 3px solid rgba(0, 242, 255, 0.1); border-top: 3px solid var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        .app-container { 
+          width: 100vw; 
+          height: 100vh; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          position: relative;
+          background: transparent;
+        }
+        .version-tag { position: absolute; top: 15px; left: 15px; font-size: 0.75rem; color: var(--text-dim); opacity: 0.6; font-family: monospace; z-index: 1000; }
+        .loading-screen p { margin-top: 20px; font-weight: 800; letter-spacing: 3px; }
+        .spinner { width: 60px; height: 60px; border: 4px solid rgba(0, 242, 255, 0.1); border-top: 4px solid var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .landing-page { text-align: center; max-width: 800px; width: 100%; }
-        .hero-section h1 { font-size: 5rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -2px; }
-        .subtitle { color: var(--text-dim); font-size: 1.2rem; margin-bottom: 50px; }
-        .action-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
-        .action-card { padding: 40px; display: flex; flex-direction: column; align-items: center; gap: 15px; transition: border-color 0.3s; border: 1px solid var(--glass-border); border-radius: 24px; }
-        .action-card:hover { border-color: var(--accent-primary); }
-        .action-card h3 { font-size: 1.5rem; }
-        .action-card p { color: var(--text-dim); }
-        .join-input-group { display: flex; gap: 10px; margin-top: 10px; }
-        .room-input { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: white; padding: 8px; width: 100px; text-align: center; font-size: 1.2rem; font-family: 'Outfit', sans-serif; font-weight: 600; text-transform: uppercase; }
-        .neon-button.mini { padding: 8px 16px; }
-        @media (max-width: 600px) { .action-cards { grid-template-columns: 1fr; } .hero-section h1 { font-size: 3rem; } }
+        
+        .main-title { font-size: 5.5rem; margin: 20px 0; font-weight: 900; }
+        .subtitle { font-size: 1.4rem; color: var(--text-dim); margin-bottom: 60px; }
+        
+        .action-cards { display: flex; gap: 40px; justify-content: center; width: 100%; max-width: 1000px; }
+        .action-card { padding: 50px; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; }
+        .action-card h3 { font-size: 2rem; }
+        .action-card .icon { color: var(--accent-primary); transition: transform 0.3s; }
+        .action-card:hover .icon { transform: scale(1.1); }
+        .join-card { cursor: default; }
+        
+        .join-input-group { display: flex; flex-direction: column; gap: 15px; width: 100%; margin-top: 10px; }
+        .room-input { 
+          background: rgba(255, 255, 255, 0.05); 
+          border: 2px solid var(--glass-border); 
+          border-radius: 12px; 
+          color: white; 
+          padding: 15px; 
+          width: 100%; 
+          text-align: center; 
+          font-size: 1.8rem; 
+          font-family: 'Outfit', sans-serif; 
+          font-weight: 800; 
+          text-transform: uppercase; 
+          outline: none;
+        }
+        .room-input:focus { border-color: var(--accent-primary); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); }
+
+        @media (max-width: 1024px) {
+          .main-title { font-size: 3.5rem; }
+          .action-cards { flex-direction: column; align-items: center; }
+          .action-card { width: 100%; max-width: 500px; padding: 30px; }
+        }
       `}</style>
     </div>
   );

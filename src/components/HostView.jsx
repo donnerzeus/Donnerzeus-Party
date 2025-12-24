@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
-import { ref, onValue, update, set } from 'firebase/database';
-import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home } from 'lucide-react';
+import { ref, onValue, update } from 'firebase/database';
+import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3 } from 'lucide-react';
 
 import FastClick from './games/FastClick';
 import ReactionTime from './games/ReactionTime';
@@ -11,6 +11,7 @@ import SimonSays from './games/SimonSays';
 import QuickDraw from './games/QuickDraw';
 import HotPotato from './games/HotPotato';
 import Steering from './games/Steering';
+import ShakeIt from './games/ShakeIt';
 
 const HostView = ({ roomCode, user, setView }) => {
   const [players, setPlayers] = useState([]);
@@ -18,6 +19,7 @@ const HostView = ({ roomCode, user, setView }) => {
   const [selectedGame, setSelectedGame] = useState('fast-click');
   const [gameType, setGameType] = useState('');
   const [isGameOver, setIsGameOver] = useState(false);
+  const [scores, setScores] = useState({}); // cross-game global scores
 
   useEffect(() => {
     const roomRef = ref(db, `rooms/${roomCode}`);
@@ -27,14 +29,16 @@ const HostView = ({ roomCode, user, setView }) => {
         setStatus(data.status);
         setGameType(data.gameType || '');
         if (data.players) {
-          setPlayers(Object.entries(data.players).map(([id, p]) => ({ id, ...p })));
+          const playerList = Object.entries(data.players).map(([id, p]) => ({ id, ...p }));
+          setPlayers(playerList);
         } else {
           setPlayers([]);
         }
-
-        // If game exploded/finished in some way
         if (data.gamePhase === 'finished') {
           setIsGameOver(true);
+        }
+        if (data.globalScores) {
+          setScores(data.globalScores);
         }
       }
     });
@@ -49,6 +53,7 @@ const HostView = ({ roomCode, user, setView }) => {
       updates[`rooms/${roomCode}/players/${p.id}/lastClick`] = 0;
       updates[`rooms/${roomCode}/players/${p.id}/drawing`] = null;
       updates[`rooms/${roomCode}/players/${p.id}/gyro`] = null;
+      updates[`rooms/${roomCode}/players/${p.id}/shakeCount`] = 0;
     });
 
     updates[`rooms/${roomCode}/status`] = 'playing';
@@ -68,106 +73,181 @@ const HostView = ({ roomCode, user, setView }) => {
     });
   };
 
-  const handleGameOver = () => {
+  const handleGameOver = (winnerId) => {
     setIsGameOver(true);
+    if (winnerId) {
+      const currentScore = scores[winnerId] || 0;
+      update(ref(db, `rooms/${roomCode}/globalScores/${winnerId}`), currentScore + 10); // Reward 10 pts
+    }
     update(ref(db, `rooms/${roomCode}`), { gamePhase: 'finished' });
   };
 
-  const joinUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+  const joinUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${roomCode}`;
+
+  const games = [
+    { id: 'fast-click', name: 'Fast Click', icon: MousePointer2, desc: 'Tap as fast as you can!' },
+    { id: 'reaction-time', name: 'Reaction', icon: Zap, desc: 'Tap when the screen turns green!' },
+    { id: 'simon-says', name: 'Simon Says', icon: ListChecks, desc: 'Repeat the memory pattern!' },
+    { id: 'quick-draw', name: 'Quick Draw', icon: Palette, desc: 'Draw the prompt on your phone!' },
+    { id: 'hot-potato', name: 'Hot Potato', icon: Bomb, desc: 'Pass the bomb before it explodes!' },
+    { id: 'steering', name: 'Steering', icon: Compass, desc: 'Work together to guide the orb!' },
+    { id: 'shake-it', name: 'Shake It!', icon: Zap, desc: 'Shake your phone like crazy!' },
+  ];
 
   if (status === 'playing') {
     return (
-      <div className="host-container">
-        <div className="game-overlay">
-          <button className="neon-button mini quit-btn" onClick={backToLobby}>
+      <div className="game-view">
+        <div className="game-hud">
+          <button className="neon-button secondary mini" onClick={backToLobby}>
             {isGameOver ? <Home size={18} /> : <LogOut size={18} />}
             <span>{isGameOver ? "BACK TO LOBBY" : "QUIT"}</span>
           </button>
         </div>
 
-        {gameType === 'fast-click' && <FastClick players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-        {gameType === 'reaction-time' && <ReactionTime players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-        {gameType === 'simon-says' && <SimonSays players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-        {gameType === 'quick-draw' && <QuickDraw players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-        {gameType === 'hot-potato' && <HotPotato players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-        {gameType === 'steering' && <Steering players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        <div className="active-game-container">
+          {gameType === 'fast-click' && <FastClick players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'reaction-time' && <ReactionTime players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'simon-says' && <SimonSays players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'quick-draw' && <QuickDraw players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'hot-potato' && <HotPotato players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'steering' && <Steering players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'shake-it' && <ShakeIt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        </div>
       </div>
     );
   }
 
-  const games = [
-    { id: 'fast-click', name: 'Fast Click', icon: MousePointer2 },
-    { id: 'reaction-time', name: 'Reaction', icon: Zap },
-    { id: 'simon-says', name: 'Simon Says', icon: ListChecks },
-    { id: 'quick-draw', name: 'Quick Draw', icon: Palette },
-    { id: 'hot-potato', name: 'Hot Potato', icon: Bomb },
-    { id: 'steering', name: 'Steering', icon: Compass },
-  ];
-
   return (
-    <div className="host-container">
-      <div className="host-header">
-        <div className="room-info">
-          <span className="label">ROOM CODE</span>
-          <h2 className="room-code neon-text">{roomCode}</h2>
-        </div>
-        <button className="neon-button secondary" onClick={() => setView('landing')}>EXIT</button>
-      </div>
-
-      <div className="host-content">
-        <div className="lobby-left">
-          <div className="glass-panel qr-section">
-            <QRCodeSVG value={joinUrl} size={150} bgColor={"transparent"} fgColor={"#00f2ff"} level={"H"} includeMargin={true} />
-            <p className="qr-hint">Scan to join</p>
+    <div className="lobby-view center-all">
+      <div className="lobby-container glass-panel">
+        <header className="lobby-header">
+          <div className="room-badge">
+            <span className="label">ROOM CODE</span>
+            <h1 className="neon-text">{roomCode}</h1>
           </div>
+          <div className="lobby-actions">
+            <button className="neon-button secondary" onClick={() => setView('landing')}>EXIT</button>
+          </div>
+        </header>
 
-          <div className="game-selector glass-panel">
-            <h3>Select Game</h3>
-            <div className="game-options-grid">
-              {games.map(game => (
-                <div key={game.id} className={`game-option ${selectedGame === game.id ? 'active' : ''}`} onClick={() => setSelectedGame(game.id)}>
-                  <game.icon size={20} />
-                  <span>{game.name}</span>
-                </div>
-              ))}
+        <main className="lobby-main">
+          <section className="lobby-left">
+            <div className="qr-container glass-panel">
+              <QRCodeSVG value={joinUrl} size={250} bgColor={"transparent"} fgColor={"#00f2ff"} level={"H"} includeMargin={true} />
+              <p className="qr-hint">Scan with your phone to join!</p>
             </div>
-          </div>
-        </div>
 
-        <div className="lobby-right">
-          <div className="players-list">
-            <div className="section-title"><Users size={24} /><h3>Players ({players.length})</h3></div>
-            <div className="players-grid">
-              <AnimatePresence>
-                {players.map((p) => (
-                  <motion.div key={p.id} initial={{ scale: 0 }} animate={{ scale: 1 }} className="player-token" style={{ '--color': p.color }}>
-                    <div className="avatar">{p.name ? p.name[0].toUpperCase() : '?'}</div>
-                    <span className="player-name">{p.name}</span>
+            <div className="leaderboard-section">
+              <div className="section-title"><BarChart3 size={24} /> <h3>HALL OF FAME</h3></div>
+              <div className="leaderboard-list">
+                {players.length === 0 ? <p className="empty">No heroes yet...</p> :
+                  players.sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0)).slice(0, 5).map((p, i) => (
+                    <div key={p.id} className="leaderboard-item">
+                      <span className="rank">#{i + 1}</span>
+                      <span className="name">{p.name}</span>
+                      <span className="score">{scores[p.id] || 0} PTS</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="lobby-center">
+            <div className="game-grid-container">
+              <div className="section-title"><h3>SELECT A MINI-GAME</h3></div>
+              <div className="games-grid">
+                {games.map(game => (
+                  <motion.div
+                    key={game.id}
+                    className={`game-card glass-panel ${selectedGame === game.id ? 'active' : ''}`}
+                    onClick={() => setSelectedGame(game.id)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <game.icon size={40} className="icon" />
+                    <div className="game-info">
+                      <h4>{game.name}</h4>
+                      <p>{game.desc}</p>
+                    </div>
+                    {selectedGame === game.id && <div className="active-glow" />}
                   </motion.div>
                 ))}
-              </AnimatePresence>
+              </div>
             </div>
-          </div>
-          <div className="controls">
-            <button className="neon-button start-btn" disabled={players.length === 0} onClick={startGame}>
-              <Play size={24} /> START {selectedGame.toUpperCase().replace('-', ' ')}
-            </button>
-          </div>
-        </div>
+          </section>
+
+          <section className="lobby-right">
+            <div className="players-container glass-panel">
+              <div className="section-title"><Users size={24} /> <h3>PLAYERS ({players.length})</h3></div>
+              <div className="players-list-scroll">
+                <AnimatePresence>
+                  {players.map(p => (
+                    <motion.div key={p.id} initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="player-row">
+                      <div className="avatar" style={{ backgroundColor: p.color }}>{p.name?.[0].toUpperCase()}</div>
+                      <span className="player-name">{p.name}</span>
+                      {scores[p.id] > 0 && <span className="player-points">{scores[p.id]}</span>}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              <button className="neon-button start-game-btn" disabled={players.length === 0} onClick={startGame}>
+                <Play size={24} /> START GAME
+              </button>
+            </div>
+          </section>
+        </main>
       </div>
 
       <style>{`
-                .host-container { width: 90vw; height: 85vh; display: flex; flex-direction: column; gap: 20px; position: relative; }
-                .game-overlay { position: absolute; top: 0; right: 0; z-index: 100; }
-                .quit-btn { border-radius: 0 0 0 12px; background: rgba(255,b255,255,0.1); display: flex; align-items: center; gap: 10px; padding: 10px 20px; }
-                .host-content { display: grid; grid-template-columns: 1fr 2fr; gap: 40px; flex: 1; }
-                .game-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-                .game-option { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.05); cursor: pointer; transition: all 0.3s; border: 1px solid transparent; font-size: 0.8rem; }
-                .game-option.active { background: rgba(0, 242, 255, 0.1); border-color: var(--accent-primary); color: var(--accent-primary); }
-                .players-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; }
-                .avatar { width: 50px; height: 50px; background: var(--card-bg); border: 2px solid var(--color); box-shadow: 0 0 10px var(--color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--color); }
-                .player-name { font-size: 0.8rem; }
-            `}</style>
+        .lobby-view { width: 100vw; height: 100vh; padding: 40px; }
+        .lobby-container { width: 100%; height: 100%; display: flex; flex-direction: column; padding: 30px; gap: 30px; }
+        .lobby-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .room-badge h1 { font-size: 5rem; margin-top: -10px; }
+        .label { font-size: 0.9rem; font-weight: 800; color: var(--text-dim); letter-spacing: 2px; }
+
+        .lobby-main { display: grid; grid-template-columns: 350px 1fr 350px; gap: 30px; flex: 1; min-height: 0; }
+        
+        /* Left Section */
+        .lobby-left { display: flex; flex-direction: column; gap: 30px; }
+        .qr-container { padding: 30px; text-align: center; }
+        .qr-hint { margin-top: 15px; font-weight: 600; color: var(--text-dim); }
+        .leaderboard-section { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .leaderboard-list { display: flex; flex-direction: column; gap: 8px; }
+        .leaderboard-item { display: flex; padding: 12px 20px; background: rgba(255,b255,255,0.05); border-radius: 12px; align-items: center; }
+        .rank { width: 40px; font-weight: 800; color: var(--accent-primary); }
+        .name { flex: 1; font-weight: 600; }
+        .score { font-weight: 800; color: var(--accent-secondary); }
+
+        /* Center Section */
+        .lobby-center { display: flex; flex-direction: column; }
+        .game-grid-container { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+        .games-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; padding-right: 10px; }
+        .game-card { padding: 25px; cursor: pointer; display: flex; align-items: center; gap: 20px; position: relative; border-color: rgba(255,255,255,0.05); }
+        .game-card.active { border-color: var(--accent-primary); background: rgba(0, 242, 255, 0.05); }
+        .game-card .icon { color: var(--accent-primary); }
+        .game-card h4 { font-size: 1.5rem; margin-bottom: 5px; }
+        .game-card p { color: var(--text-dim); font-size: 0.9rem; }
+        .active-glow { position: absolute; inset: 0; border: 2px solid var(--accent-primary); border-radius: 20px; box-shadow: 0 0 20px rgba(0, 242, 255, 0.3); pointer-events: none; }
+
+        /* Right Section */
+        .lobby-right { }
+        .players-container { height: 100%; display: flex; flex-direction: column; padding: 25px; gap: 20px; }
+        .players-list-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 10px; }
+        .player-row { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 15px; }
+        .avatar { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; border: 2px solid rgba(255,255,255,0.2); }
+        .player-name { flex: 1; font-weight: 600; font-size: 1.1rem; }
+        .player-points { font-weight: 800; background: var(--accent-secondary); padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; }
+        .start-game-btn { width: 100%; padding: 20px; font-size: 1.5rem; margin-top: auto; }
+
+        .section-title { display: flex; align-items: center; gap: 10px; color: var(--text-dim); }
+        .section-title h3 { font-size: 1rem; font-weight: 800; letter-spacing: 2px; }
+
+        /* HUD */
+        .game-view { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+        .game-hud { position: absolute; top: 10px; right: 10px; z-index: 1000; }
+        .active-game-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
+      `}</style>
     </div>
   );
 };
