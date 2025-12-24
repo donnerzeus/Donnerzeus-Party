@@ -220,7 +220,7 @@ const HostView = ({ roomCode, user, setView }) => {
         .qr-hint { margin-top: 15px; font-weight: 600; color: var(--text-dim); }
         .leaderboard-section { flex: 1; display: flex; flex-direction: column; gap: 15px; }
         .leaderboard-list { display: flex; flex-direction: column; gap: 8px; }
-        .leaderboard-item { display: flex; padding: 12px 20px; background: rgba(255,b255,255,0.05); border-radius: 12px; align-items: center; }
+        .leaderboard-item { display: flex; padding: 12px 20px; background: rgba(255,255,255,0.05); border-radius: 12px; align-items: center; }
         .rank { width: 40px; font-weight: 800; color: var(--accent-primary); }
         .name { flex: 1; font-weight: 600; }
         .score { font-weight: 800; color: var(--accent-secondary); }

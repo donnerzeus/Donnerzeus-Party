@@ -121,7 +121,7 @@ const Steering = ({ players, roomCode, onGameOver }) => {
                     border: 4px solid var(--glass-border);
                 }
 
-                .barrier { position: absolute; background: var(--accent-secondary); border-radius: 10px; border: 2px solid rgba(255,b255,255,0.2); }
+                .barrier { position: absolute; background: var(--accent-secondary); border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); }
                 .barrier-glow { position: absolute; inset: -5px; background: var(--accent-secondary); filter: blur(15px); opacity: 0.2; }
 
                 .start-zone { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.2); font-weight: 800; font-size: 2rem; border-left: 5px solid; padding-left: 10px; }

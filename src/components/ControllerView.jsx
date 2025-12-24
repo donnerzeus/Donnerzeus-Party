@@ -324,7 +324,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .controller-view { width: 100vw; height: 100vh; padding: 20px; position: relative; }
                 .setup-panel, .error-panel, .lobby-info { width: 100%; max-width: 400px; padding: 40px; text-align: center; display: flex; flex-direction: column; gap: 20px; align-items: center; }
                 
-                .controller-input { background: rgba(255,b255,255,0.1); border: 2px solid var(--glass-border); padding: 20px; border-radius: 15px; color: white; width: 100%; text-align: center; font-size: 1.5rem; font-weight: 800; outline: none; }
+                .controller-input { background: rgba(255,255,255,0.1); border: 2px solid var(--glass-border); padding: 20px; border-radius: 15px; color: white; width: 100%; text-align: center; font-size: 1.5rem; font-weight: 800; outline: none; }
                 .controller-input:focus { border-color: var(--accent-primary); }
                 .full { width: 100%; }
 

@@ -135,7 +135,7 @@ const QuickDraw = ({ players, roomCode, onGameOver }) => {
                 .hint { color: var(--text-dim); font-size: 1.5rem; }
                 
                 .progress-list { display: flex; gap: 15px; margin-top: 40px; flex-wrap: wrap; justify-content: center; }
-                .p-indicator { padding: 10px 20px; border-radius: 20px; background: rgba(255,b255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-dim); }
+                .p-indicator { padding: 10px 20px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-dim); }
                 .p-indicator.ready { border-color: var(--accent-primary); color: var(--accent-primary); box-shadow: 0 0 10px rgba(0,242,255,0.2); }
 
                 .drawings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1200px; margin-top: 40px; }

@@ -122,7 +122,7 @@ const TugOfWar = ({ players, roomCode, onGameOver }) => {
                 .win-zone.red { border-color: #ff4444; color: #ff4444; }
                 .win-zone.blue { border-color: #4444ff; color: #4444ff; }
                 
-                .rope-track { flex: 1; height: 20px; background: rgba(255,b255,255,0.1); border-radius: 10px; position: relative; border: 2px solid var(--glass-border); }
+                .rope-track { flex: 1; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; position: relative; border: 2px solid var(--glass-border); }
                 .rope { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 100%; height: 10px; background: #8b4513; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
                 .rope::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; top: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.2) 10px, rgba(0,0,0,0.2) 20px); }
                 
