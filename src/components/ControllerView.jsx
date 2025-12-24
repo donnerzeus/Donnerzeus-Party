@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy } from 'lucide-react';
 
 const ControllerView = ({ roomCode, user, setView }) => {
     const [name, setName] = useState('');

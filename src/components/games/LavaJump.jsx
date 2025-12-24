@@ -132,7 +132,7 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
                                     >
                                         <div className="name-tag">{p.name}</div>
                                         <div className="char">
-                                            {deadPlayers.has(p.id) ? <Skull size={40} /> : <div className="p-icon" style={{ background: p.color }}>{p.name[0]}</div>}
+                                            {deadPlayers.has(p.id) ? <Skull size={40} /> : <div className="p-icon" style={{ background: p.color }}>{p.name?.[0]}</div>}
                                         </div>
                                     </motion.div>
                                 ))}

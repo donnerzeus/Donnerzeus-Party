@@ -93,10 +93,10 @@ const TugOfWar = ({ players, roomCode, onGameOver }) => {
 
             <div className="players-vs">
                 <div className="red-list">
-                    {teams.red.map(p => <div key={p.id} className="p-mini" style={{ background: p.color }}>{p.name[0]}</div>)}
+                    {teams.red.map(p => <div key={p.id} className="p-mini" style={{ background: p.color }}>{p.name?.[0]}</div>)}
                 </div>
                 <div className="blue-list">
-                    {teams.blue.map(p => <div key={p.id} className="p-mini" style={{ background: p.color }}>{p.name[0]}</div>)}
+                    {teams.blue.map(p => <div key={p.id} className="p-mini" style={{ background: p.color }}>{p.name?.[0]}</div>)}
                 </div>
             </div>
 

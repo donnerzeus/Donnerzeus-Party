@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
-import { ref, onValue, update } from 'firebase/database';
-import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3 } from 'lucide-react';
+import { ref, onValue, update, set } from 'firebase/database';
+import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame } from 'lucide-react';
 
 import FastClick from './games/FastClick';
 import ReactionTime from './games/ReactionTime';
@@ -79,7 +79,7 @@ const HostView = ({ roomCode, user, setView }) => {
     setIsGameOver(true);
     if (winnerId) {
       const currentScore = scores[winnerId] || 0;
-      update(ref(db, `rooms/${roomCode}/globalScores/${winnerId}`), currentScore + 10); // Reward 10 pts
+      set(ref(db, `rooms/${roomCode}/globalScores/${winnerId}`), currentScore + 10); // Reward 10 pts
     }
     update(ref(db, `rooms/${roomCode}`), { gamePhase: 'finished' });
   };
