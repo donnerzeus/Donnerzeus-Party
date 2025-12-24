@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, onValue, update, set } from 'firebase/database';
-import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks } from 'lucide-react';
+import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home } from 'lucide-react';
 
 import FastClick from './games/FastClick';
 import ReactionTime from './games/ReactionTime';
@@ -17,6 +17,7 @@ const HostView = ({ roomCode, user, setView }) => {
   const [status, setStatus] = useState('lobby');
   const [selectedGame, setSelectedGame] = useState('fast-click');
   const [gameType, setGameType] = useState('');
+  const [isGameOver, setIsGameOver] = useState(false);
 
   useEffect(() => {
     const roomRef = ref(db, `rooms/${roomCode}`);
@@ -30,12 +31,18 @@ const HostView = ({ roomCode, user, setView }) => {
         } else {
           setPlayers([]);
         }
+
+        // If game exploded/finished in some way
+        if (data.gamePhase === 'finished') {
+          setIsGameOver(true);
+        }
       }
     });
     return () => unsubscribe();
   }, [roomCode]);
 
   const startGame = () => {
+    setIsGameOver(false);
     const updates = {};
     players.forEach(p => {
       updates[`rooms/${roomCode}/players/${p.id}/score`] = 0;
@@ -53,11 +60,17 @@ const HostView = ({ roomCode, user, setView }) => {
   };
 
   const backToLobby = () => {
+    setIsGameOver(false);
     update(ref(db, `rooms/${roomCode}`), {
       status: 'lobby',
       gameType: '',
       gamePhase: ''
     });
+  };
+
+  const handleGameOver = () => {
+    setIsGameOver(true);
+    update(ref(db, `rooms/${roomCode}`), { gamePhase: 'finished' });
   };
 
   const joinUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
@@ -66,14 +79,18 @@ const HostView = ({ roomCode, user, setView }) => {
     return (
       <div className="host-container">
         <div className="game-overlay">
-          <button className="neon-button mini quit-btn" onClick={backToLobby}>QUIT LOBBY</button>
+          <button className="neon-button mini quit-btn" onClick={backToLobby}>
+            {isGameOver ? <Home size={18} /> : <LogOut size={18} />}
+            <span>{isGameOver ? "BACK TO LOBBY" : "QUIT"}</span>
+          </button>
         </div>
-        {gameType === 'fast-click' && <FastClick players={players} roomCode={roomCode} />}
-        {gameType === 'reaction-time' && <ReactionTime players={players} roomCode={roomCode} />}
-        {gameType === 'simon-says' && <SimonSays players={players} roomCode={roomCode} />}
-        {gameType === 'quick-draw' && <QuickDraw players={players} roomCode={roomCode} />}
-        {gameType === 'hot-potato' && <HotPotato players={players} roomCode={roomCode} />}
-        {gameType === 'steering' && <Steering players={players} roomCode={roomCode} />}
+
+        {gameType === 'fast-click' && <FastClick players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        {gameType === 'reaction-time' && <ReactionTime players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        {gameType === 'simon-says' && <SimonSays players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        {gameType === 'quick-draw' && <QuickDraw players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        {gameType === 'hot-potato' && <HotPotato players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        {gameType === 'steering' && <Steering players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
       </div>
     );
   }
@@ -142,7 +159,7 @@ const HostView = ({ roomCode, user, setView }) => {
       <style>{`
                 .host-container { width: 90vw; height: 85vh; display: flex; flex-direction: column; gap: 20px; position: relative; }
                 .game-overlay { position: absolute; top: 0; right: 0; z-index: 100; }
-                .quit-btn { border-radius: 0 0 0 12px; background: rgba(255,0,0,0.2); }
+                .quit-btn { border-radius: 0 0 0 12px; background: rgba(255,b255,255,0.1); display: flex; align-items: center; gap: 10px; padding: 10px 20px; }
                 .host-content { display: grid; grid-template-columns: 1fr 2fr; gap: 40px; flex: 1; }
                 .game-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
                 .game-option { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.05); cursor: pointer; transition: all 0.3s; border: 1px solid transparent; font-size: 0.8rem; }

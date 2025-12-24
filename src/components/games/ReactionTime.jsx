@@ -4,7 +4,7 @@ import { Zap, Clock, AlertTriangle } from 'lucide-react';
 import { db } from '../../firebase';
 import { ref, update } from 'firebase/database';
 
-const ReactionTime = ({ players, roomCode }) => {
+const ReactionTime = ({ players, roomCode, onGameOver }) => {
     const [phase, setPhase] = useState('countdown'); // countdown, waiting, tap, finished
     const [countdown, setCountdown] = useState(3);
     const [startTime, setStartTime] = useState(0);
@@ -17,24 +17,18 @@ const ReactionTime = ({ players, roomCode }) => {
                 return () => clearTimeout(timer);
             } else {
                 setPhase('waiting');
-                // Set a random delay between 2 and 5 seconds
                 const delay = Math.random() * 3000 + 2000;
                 setTimeout(() => {
                     setPhase('tap');
                     const now = Date.now();
                     setStartTime(now);
-                    // Inform RTDB that the tap phase has started so controllers can show green
-                    update(ref(db, `rooms/${roomCode}`), {
-                        gamePhase: 'tap',
-                        tapStartTime: now
-                    });
+                    update(ref(db, `rooms/${roomCode}`), { gamePhase: 'tap', tapStartTime: now });
                 }, delay);
             }
         }
     }, [countdown, phase, roomCode]);
 
     useEffect(() => {
-        // Calculate results when players tap
         const newResults = players
             .filter(p => p.lastClick && p.lastClick >= startTime)
             .map(p => ({
@@ -47,98 +41,44 @@ const ReactionTime = ({ players, roomCode }) => {
 
         setResults(newResults);
 
-        // If everyone has tapped or 5 seconds passed, finish
-        if (players.length > 0 && newResults.length === players.length) {
+        if (players.length > 0 && newResults.length === players.length && phase === 'tap') {
             setPhase('finished');
+            if (onGameOver) onGameOver();
         }
-    }, [players, startTime]);
+    }, [players, startTime, phase, onGameOver]);
 
     return (
         <div className="game-container">
             <AnimatePresence mode="wait">
                 {phase === 'countdown' && (
-                    <motion.div
-                        key="countdown"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.2 }}
-                        className="center-content"
-                    >
+                    <motion.div key="countdown" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.2 }} className="center-content">
                         <Clock size={80} className="neon-text" />
                         <h2>Reaction Test!</h2>
                         <h1 className="big-number">{countdown}</h1>
                     </motion.div>
                 )}
-
-                {phase === 'waiting' && (
-                    <motion.div
-                        key="waiting"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="full-screen-state waiting"
-                    >
-                        <AlertTriangle size={120} />
-                        <h1>WAIT FOR GREEN...</h1>
-                    </motion.div>
-                )}
-
-                {phase === 'tap' && (
-                    <motion.div
-                        key="tap"
-                        initial={{ opacity: 0, scale: 1.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="full-screen-state tap"
-                    >
-                        <Zap size={150} />
-                        <h1>TAP NOW!!!</h1>
-                    </motion.div>
-                )}
-
+                {phase === 'waiting' && <div className="full-screen-state waiting"><h1>WAIT FOR GREEN...</h1></div>}
+                {phase === 'tap' && <div className="full-screen-state tap"><h1>TAP NOW!!!</h1></div>}
                 {phase === 'finished' && (
-                    <motion.div
-                        key="results"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="leaderboard-screen"
-                    >
+                    <motion.div key="results" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="leaderboard-screen">
                         <h1 className="neon-text">FASTEST REFLEXES</h1>
                         <div className="leaderboard-grid">
                             {results.map((res, index) => (
                                 <div key={res.id} className="player-result-card glass-panel" style={{ '--color': res.color }}>
                                     <div className="rank">#{index + 1}</div>
                                     <div className="name">{res.name}</div>
-                                    <div className="score-box">
-                                        <span className="score">{(res.time / 1000).toFixed(3)}s</span>
-                                    </div>
+                                    <div className="score">{(res.time / 1000).toFixed(3)}s</div>
                                 </div>
                             ))}
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <style jsx>{`
-                .game-container, .center-content {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    width: 100%;
-                }
+            <style>{`
+                .game-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
+                .center-content { text-align: center; }
                 .big-number { font-size: 10rem; color: var(--accent-primary); }
-                .full-screen-state {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10;
-                }
+                .full-screen-state { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 4rem; font-weight: 800; z-index: 10; }
                 .waiting { background: #800; color: white; }
                 .tap { background: #080; color: white; }
                 .leaderboard-screen { width: 100%; max-width: 600px; }
