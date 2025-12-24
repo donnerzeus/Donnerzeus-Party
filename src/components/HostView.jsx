@@ -207,7 +207,13 @@ const HostView = ({ roomCode, user, setView }) => {
                 <AnimatePresence>
                   {players.map(p => (
                     <motion.div key={p.id} initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="player-row">
-                      <div className="avatar" style={{ backgroundColor: p.color }}>{p.name?.[0].toUpperCase()}</div>
+                      <div className="avatar" style={{ backgroundColor: p.color }}>
+                        {p.avatar ? (
+                          <img src={p.avatar} alt={p.name} className="avatar-img" />
+                        ) : (
+                          p.name?.[0].toUpperCase()
+                        )}
+                      </div>
                       <span className="player-name">{p.name}</span>
                       {scores[p.id] > 0 && <span className="player-points">{scores[p.id]}</span>}
                     </motion.div>
@@ -259,7 +265,8 @@ const HostView = ({ roomCode, user, setView }) => {
         .players-container { height: 100%; display: flex; flex-direction: column; padding: 25px; gap: 20px; }
         .players-list-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 10px; }
         .player-row { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 15px; }
-        .avatar { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; border: 2px solid rgba(255,255,255,0.2); }
+        .avatar { width: 45px; height: 45px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; border: 2px solid rgba(255,255,255,0.2); overflow: hidden; }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
         .player-name { flex: 1; font-weight: 600; font-size: 1.1rem; }
         .player-points { font-weight: 800; background: var(--accent-secondary); padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; }
         .start-game-btn { width: 100%; padding: 20px; font-size: 1.5rem; margin-top: auto; }

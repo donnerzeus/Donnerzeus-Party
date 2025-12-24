@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload } from 'lucide-react';
 
 const ControllerView = ({ roomCode, user, setView }) => {
     const [name, setName] = useState('');
@@ -10,6 +10,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
     const [roomData, setRoomData] = useState(null);
     const [playerData, setPlayerData] = useState(null);
     const [isError, setIsError] = useState(false);
+    const [avatar, setAvatar] = useState(null);
     const [sensorsActive, setSensorsActive] = useState(false);
     const [loveSequence, setLoveSequence] = useState([]);
     const [loveStep, setLoveStep] = useState(0);
@@ -112,10 +113,26 @@ const ControllerView = ({ roomCode, user, setView }) => {
         update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
             name: name.trim(),
             color: colors[Math.floor(Math.random() * colors.length)],
+            avatar: avatar,
             joinedAt: Date.now(), score: 0, lastClick: 0
         });
         setJoined(true);
         requestSensorPermission();
+    };
+
+    const handleAvatarChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 200000) { // 200KB limit
+                alert("Resim çok büyük! Lütfen daha küçük bir fotoğraf seç.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAvatar(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleAction = (type, val) => {
@@ -248,9 +265,21 @@ const ControllerView = ({ roomCode, user, setView }) => {
                     <motion.div key="join" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="glass-panel setup-panel">
                         <User size={64} className="neon-text" />
                         <h2>CHOOSE NICKNAME</h2>
-                        <form onSubmit={handleJoin}>
-                            <input className="controller-input" value={name} onChange={e => setName(e.target.value)} placeholder="Player Name" autoFocus />
-                            <button className="neon-button full" type="submit">ENTER LOBBY</button>
+                        <form onSubmit={handleJoin} className="setup-form">
+                            <div className="avatar-picker-section">
+                                <label className="avatar-preview-box glass-panel">
+                                    {avatar ? (
+                                        <img src={avatar} alt="Avatar" className="avatar-img" />
+                                    ) : (
+                                        <Camera size={40} opacity={0.5} />
+                                    )}
+                                    <input type="file" accept="image/*" onChange={handleAvatarChange} hidden />
+                                    <div className="upload-badge"><Upload size={14} /></div>
+                                </label>
+                                <p className="hint">FOTOĞRAF EKLE</p>
+                            </div>
+                            <input className="controller-input" value={name} onChange={e => setName(e.target.value)} placeholder="Takma Adın" autoFocus />
+                            <button className="neon-button full" type="submit">LOBİYE GİR</button>
                         </form>
                     </motion.div>
                 ) : (
@@ -531,7 +560,14 @@ const ControllerView = ({ roomCode, user, setView }) => {
             <style>{`
                 .controller-view { width: 100vw; height: 100vh; padding: 20px; position: relative; }
                 .setup-panel, .error-panel, .lobby-info { width: 100%; max-width: 400px; padding: 40px; text-align: center; display: flex; flex-direction: column; gap: 20px; align-items: center; }
+                .setup-form { width: 100%; display: flex; flex-direction: column; gap: 20px; }
                 
+                .avatar-picker-section { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px; }
+                .avatar-preview-box { width: 100px; height: 100px; border-radius: 30px; border: 3px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; overflow: hidden; transition: all 0.3s; background: rgba(255,b255,255,0.05); }
+                .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+                .upload-badge { position: absolute; bottom: 5px; right: 5px; background: var(--accent-primary); color: black; padding: 4px; border-radius: 8px; display: flex; align-items: center; justify-content: center; z-index: 2; }
+                .avatar-picker-section .hint { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); letter-spacing: 1px; }
+
                 .controller-input { background: rgba(255,255,255,0.1); border: 2px solid var(--glass-border); padding: 20px; border-radius: 15px; color: white; width: 100%; text-align: center; font-size: 1.5rem; font-weight: 800; outline: none; }
                 .controller-input:focus { border-color: var(--accent-primary); }
                 .full { width: 100%; }
