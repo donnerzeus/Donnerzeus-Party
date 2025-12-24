@@ -123,21 +123,60 @@ const ControllerView = ({ roomCode, user, setView }) => {
     const handleAvatarChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 200000) { // 200KB limit
-                alert("Resim çok büyük! Lütfen daha küçük bir fotoğraf seç.");
-                return;
-            }
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setAvatar(reader.result);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Create canvas for compression
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 100; // Small but enough for icons
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Compress to JPG for smaller size than PNG
+                    const compressed = canvas.toDataURL('image/jpeg', 0.6);
+                    setAvatar(compressed);
+                };
+                img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         }
     };
 
     const handleAction = (type, val) => {
-        if (roomData?.status !== 'playing' || !user) return;
+        if (!user) return;
         if (navigator.vibrate) navigator.vibrate(60);
+
+        if (roomData?.status === 'lobby') {
+            const step = 5;
+            let nextX = playerData?.lobbyX ?? Math.random() * 80 + 10;
+            let nextY = playerData?.lobbyY ?? Math.random() * 80 + 10;
+            if (val === 0) nextY = Math.max(0, nextY - step);
+            if (val === 1) nextY = Math.min(100, nextY + step);
+            if (val === 2) nextX = Math.max(0, nextX - step);
+            if (val === 3) nextX = Math.min(100, nextX + step);
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { lobbyX: nextX, lobbyY: nextY });
+            return;
+        }
+
+        if (roomData?.status !== 'playing') return;
 
         if (roomData.gameType === 'fast-click') {
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
@@ -155,7 +194,21 @@ const ControllerView = ({ roomCode, user, setView }) => {
         } else if (roomData.gameType === 'hot-potato') {
             if (roomData.bombHolderId === user.uid) {
                 const other = Object.keys(roomData.players).filter(id => id !== user.uid);
-                if (other.length > 0) update(ref(db, `rooms/${roomCode}`), { bombHolderId: other[Math.floor(Math.random() * other.length)] });
+                if (other.length > 0) {
+                    update(ref(db, `rooms/${roomCode}`), { bombHolderId: other[Math.floor(Math.random() * other.length)] });
+                    if (navigator.vibrate) navigator.vibrate([50, 20, 50]);
+                }
+            }
+        } else if (roomData.gameType === 'math-race') {
+            const answer = parseInt(val);
+            if (answer === roomData.correctAnswer) {
+                update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
+                    score: (playerData?.score || 0) + 1,
+                    distance: (playerData?.distance || 0) + 5
+                });
+                if (navigator.vibrate) navigator.vibrate(100);
+            } else {
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             }
         } else if (roomData.gameType === 'tug-of-war') {
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { score: (playerData?.score || 0) + 1 });
@@ -292,13 +345,16 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                 </div>
                                 <ShieldCheck size={80} color="#00ff44" className="success-icon" />
                                 <h2>CONNECTED!</h2>
-                                <p>Get ready for the next game...</p>
-
-                                {!sensorsActive && (
-                                    <button className="neon-button mini sensor-btn" onClick={requestSensorPermission}>
-                                        <Compass size={18} /> ENABLE MOTION
-                                    </button>
-                                )}
+                                <p>Move your avatar in the lobby!</p>
+                                <div className="arrow-controls lobby-arrows">
+                                    <button className="arrow-btn" onClick={() => handleAction('move', 0)}><ArrowUp /></button>
+                                    <div className="mid-arrows">
+                                        <button className="arrow-btn" onClick={() => handleAction('move', 2)}><ArrowLeft /></button>
+                                        <div className="lobby-icon-center"><User /></div>
+                                        <button className="arrow-btn" onClick={() => handleAction('move', 3)}><ArrowRight /></button>
+                                    </div>
+                                    <button className="arrow-btn" onClick={() => handleAction('move', 1)}><ArrowDown /></button>
+                                </div>
                             </div>
                         ) : (
                             <div className="game-interface center-all">
@@ -551,6 +607,24 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                         </div>
                                     </div>
                                 )}
+
+                                {roomData.gameType === 'math-race' && (
+                                    <div className="math-ui center-all">
+                                        <Calculator size={80} color="#00f2ff" />
+                                        <div className="simon-grid">
+                                            {(roomData.choices || []).map((choice, i) => (
+                                                <button
+                                                    key={i}
+                                                    className="simon-pad math-btn"
+                                                    onClick={() => handleAction('answer', choice)}
+                                                >
+                                                    {choice}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p>CHOOSE CORRECT ANSER!</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -648,9 +722,15 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .pos-bar { width: 90%; height: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; position: relative; margin-top: 20px; }
                 .pos-bar .indicator { width: 30px; height: 30px; background: var(--accent-primary); border-radius: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px var(--accent-primary); transition: left 0.2s; }
 
+                .lobby-arrows { margin-top: 30px; scale: 1.2; }
+                .lobby-icon-center { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; color: var(--accent-primary); background: rgba(0,242,255,0.1); border-radius: 50%; }
+
                 .input-progress { display: flex; gap: 10px; margin-top: 20px; }
                 .input-progress .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.2); }
                 .input-progress .dot.active { background: #00f2ff; box-shadow: 0 0 10px #00f2ff; }
+
+                .math-btn { font-size: 2rem !important; font-weight: 900; color: white; background: rgba(255,b255,255,0.1) !important; border: 2px solid var(--glass-border) !important; }
+                .math-btn:active { background: var(--accent-primary) !important; color: black; }
             `}</style>
         </div>
     );
