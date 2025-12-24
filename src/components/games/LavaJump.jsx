@@ -11,8 +11,6 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
     const [deadPlayers, setDeadPlayers] = useState(new Set());
     const [gameTime, setGameTime] = useState(30);
 
-    const PLATFORM_Y = 80; // Ground position in %
-
     useEffect(() => {
         if (gameState === 'countdown') {
             if (countdown > 0) {
@@ -23,28 +21,27 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
                 update(ref(db, `rooms/${roomCode}`), { gamePhase: 'playing' });
             }
         }
-    }, [countdown, gameState]);
+    }, [countdown, gameState, roomCode]);
 
     useEffect(() => {
         if (gameState !== 'playing') return;
 
         const interval = setInterval(() => {
             setGameTime(prev => {
-                if (prev <= 0) {
+                if (prev <= 1) {
                     setGameState('results');
-                    clearInterval(interval);
                     return 0;
                 }
                 return prev - 1;
             });
 
             // Spawn obstacles
-            if (Math.random() > 0.6) {
+            if (Math.random() > 0.4) {
                 const newObs = {
-                    id: Date.now(),
-                    x: 100, // Starts from right
-                    speed: 1.5 + (30 - gameTime) * 0.1, // Speeds up over time
-                    width: 5 + Math.random() * 10
+                    id: Date.now() + Math.random(),
+                    x: 110,
+                    speed: 0.8 + (30 - gameTime) * 0.05,
+                    width: 4 + Math.random() * 6
                 };
                 setObstacles(prev => [...prev, newObs]);
             }
@@ -64,13 +61,16 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
                 players.forEach(p => {
                     if (deadPlayers.has(p.id)) return;
 
-                    const playerX = p.pos || 50; // We'll assume center if no movement, or tilt
                     const isJumping = (p.action === 'jump');
 
-                    // Simple collision: if obstacle is at player's X (around 50) and player is NOT jumping
+                    // Collision: if obstacle is at player's zone (around 48-52%) and player is NOT jumping
                     updated.forEach(o => {
-                        if (o.x > 45 && o.x < 55 && !isJumping) {
-                            setDeadPlayers(prevDead => new Set([...prevDead, p.id]));
+                        if (o.x > 47 && o.x < 53 && !isJumping) {
+                            setDeadPlayers(prevDead => {
+                                const next = new Set(prevDead);
+                                next.add(p.id);
+                                return next;
+                            });
                         }
                     });
                 });
@@ -78,11 +78,10 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
                 return updated;
             });
 
-            // If everyone is dead
             if (players.length > 0 && deadPlayers.size === players.length) {
                 setGameState('results');
             }
-        }, 30);
+        }, 20);
 
         return () => clearInterval(gameLoop);
     }, [gameState, players, deadPlayers]);
@@ -90,93 +89,99 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
     useEffect(() => {
         if (gameState === 'results') {
             const alive = players.filter(p => !deadPlayers.has(p.id));
-            if (onGameOver) {
+            if (onGameOver && alive.length > 0) {
+                // Reward first survivor or all? Let's reward all survivors
                 alive.forEach(p => onGameOver(p.id));
+            } else if (onGameOver && alive.length === 0) {
+                onGameOver(); // No winner
             }
         }
     }, [gameState]);
 
     return (
-        <div className="lava-game center-all">
+        <div className="lava-game">
             <AnimatePresence mode="wait">
                 {gameState === 'countdown' && (
                     <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}>
-                        <h1 className="neon-text CD">WATCH OUT!</h1>
+                        <h1 className="neon-text cd-title">WATCH OUT!</h1>
                         <h1 className="big-cd">{countdown}</h1>
                         <p className="hint">JUMP to avoid the obstacles!</p>
                     </motion.div>
                 )}
 
                 {(gameState === 'playing' || gameState === 'results') && (
-                    <div className="lava-arena center-all">
+                    <div className="lava-arena">
                         <div className="game-hud">
-                            <div className="timer"><Activity size={24} /> <span>{gameTime}s</span></div>
-                            <div className="survivors">Survivors: {players.length - deadPlayers.size}</div>
+                            <div className="timer-box glass-panel"><Activity size={24} /> <span>{gameTime}s</span></div>
+                            <div className="survivors-box glass-panel">LIVE: {players.length - deadPlayers.size}</div>
                         </div>
 
-                        <div className="stage">
-                            <div className="platform-track" />
+                        <div className="stage-area">
+                            <div className="platform-line" />
 
-                            {/* Players */}
                             <div className="players-layer">
                                 {players.map(p => (
                                     <motion.div
                                         key={p.id}
-                                        className={`p-avatar ${deadPlayers.has(p.id) ? 'dead' : ''}`}
+                                        className={`p-avatar-box ${deadPlayers.has(p.id) ? 'is-dead' : ''}`}
                                         animate={{
-                                            y: p.action === 'jump' ? -150 : 0,
+                                            y: p.action === 'jump' ? -180 : 0,
                                             rotate: deadPlayers.has(p.id) ? 90 : 0,
                                             opacity: deadPlayers.has(p.id) ? 0.3 : 1
                                         }}
-                                        style={{ '--color': p.color }}
+                                        transition={{ type: 'spring', damping: 15, stiffness: 200 }}
                                     >
-                                        <div className="name-tag">{p.name}</div>
-                                        <div className="char">
-                                            {deadPlayers.has(p.id) ? <Skull size={40} /> : <div className="p-icon" style={{ background: p.color }}>{p.name?.[0]}</div>}
+                                        <div className="name-tag" style={{ borderColor: p.color }}>{p.name}</div>
+                                        <div className="character-body" style={{ backgroundColor: p.color }}>
+                                            {deadPlayers.has(p.id) ? <Skull size={30} /> : <div className="p-initial">{p.name?.[0]}</div>}
                                         </div>
                                     </motion.div>
                                 ))}
                             </div>
 
-                            {/* Obstacles */}
                             {obstacles.map(o => (
                                 <motion.div
                                     key={o.id}
-                                    className="obstacle"
+                                    className="lava-obstacle"
                                     style={{ left: `${o.x}%`, width: `${o.width}%` }}
                                 >
-                                    <Flame size={40} color="#ffaa00" />
-                                    <div className="fire-glow" />
+                                    <Flame size={40} className="flame-icon" />
+                                    <div className="glow-effect" />
                                 </motion.div>
                             ))}
 
-                            <div className="lava-pit" />
+                            <div className="lava-floor" />
                         </div>
                     </div>
                 )}
             </AnimatePresence>
 
             <style>{`
-                .lava-game { width: 100%; height: 100%; position: relative; }
-                .big-cd { font-size: 15rem; color: #ff0044; }
+                .lava-game { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+                .cd-title { font-size: 5rem; color: #ff0044; }
+                .big-cd { font-size: 15rem; font-weight: 900; }
                 
-                .lava-arena { width: 100%; height: 100%; display: flex; flex-direction: column; }
-                .game-hud { position: absolute; top: 40px; width: 100%; display: flex; justify-content: space-around; font-size: 2rem; font-weight: 800; }
+                .lava-arena { width: 100%; height: 100%; position: relative; }
+                .game-hud { position: absolute; top: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 40px; z-index: 10; }
+                .timer-box, .survivors-box { padding: 15px 30px; font-size: 2rem; font-weight: 900; display: flex; align-items: center; gap: 15px; border-radius: 20px; }
                 
-                .stage { width: 100%; height: 600px; position: relative; overflow: hidden; margin-top: 100px; }
-                .platform-track { position: absolute; top: 80%; left: 0; right: 0; height: 10px; background: rgba(255,255,255,0.2); border-radius: 5px; }
+                .stage-area { width: 100%; height: 100%; position: relative; background: radial-gradient(circle at bottom, #300, transparent); }
+                .platform-line { position: absolute; top: 70%; left: 0; right: 0; height: 4px; background: rgba(255,255,255,0.2); }
                 
-                .players-layer { position: absolute; top: 80%; left: 0; right: 0; display: flex; justify-content: center; gap: 20px; align-items: flex-end; transform: translateY(-100%); }
-                .p-avatar { display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
-                .name-tag { font-size: 0.9rem; font-weight: 800; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 5px; }
-                .p-icon { width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; border: 3px solid white; box-shadow: 0 0 20px var(--color); }
+                .players-layer { position: absolute; top: 70%; left: 0; right: 0; display: flex; justify-content: center; gap: 30px; align-items: flex-end; transform: translateY(-100%); z-index: 5; }
+                .p-avatar-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+                .name-tag { font-size: 1.2rem; font-weight: 800; background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 10px; border: 2px solid; color: white; }
+                .character-body { width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 0 20px rgba(255,b255,255,0.3); }
+                .p-initial { font-size: 2.5rem; font-weight: 900; color: white; }
                 
-                .obstacle { position: absolute; top: 80%; height: 60px; transform: translateY(-100%); background: linear-gradient(0deg, #ff4400, transparent); display: flex; justify-content: center; align-items: center; border-radius: 10px 10px 0 0; }
-                .fire-glow { position: absolute; inset: 0; background: #ff4400; filter: blur(20px); opacity: 0.3; }
+                .lava-obstacle { position: absolute; top: 70%; height: 80px; transform: translateY(-100%); background: linear-gradient(0deg, #ff4400, #ffaa00); border-radius: 15px 15px 0 0; display: flex; align-items: center; justify-content: center; }
+                .flame-icon { color: white; filter: drop-shadow(0 0 10px #ffaa00); }
+                .glow-effect { position: absolute; inset: 0; background: #ff4400; filter: blur(20px); opacity: 0.3; }
 
-                .lava-pit { position: absolute; bottom: 0; left: 0; right: 0; height: 10%; background: linear-gradient(0deg, #ff0000, #ffaa00); filter: blur(10px); opacity: 0.6; }
+                .lava-floor { position: absolute; bottom: 0; left: 0; right: 0; height: 15%; background: linear-gradient(0deg, #ff0000, #ffcc00); filter: blur(10px); opacity: 0.8; animation: lava-wave 3s infinite alternate; }
+                @keyframes lava-wave { from { transform: translateY(0); } to { transform: translateY(10px); } }
 
-                .dead { filter: grayscale(1); }
+                .is-dead { filter: grayscale(1); }
             `}</style>
         </div>
     );

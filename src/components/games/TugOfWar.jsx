@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
-import { ref, update, onValue, set } from 'firebase/database';
+import { ref, update, onValue } from 'firebase/database';
 import { Swords, Trophy } from 'lucide-react';
 
 const TugOfWar = ({ players, roomCode, onGameOver }) => {
@@ -39,28 +39,28 @@ const TugOfWar = ({ players, roomCode, onGameOver }) => {
                     if (p.team === 'blue') bluePull += pullPower;
                 });
 
-                // Calculate rope position based on relative pull total
-                // This is a simple tug logic: diff determines trend
+                // Sensitivity: Increased significantly
+                // Each click diff now weight 2.5% of the total track
+                const diff = (bluePull - redPull) * 2.5;
                 setRopePos(prev => {
-                    const diff = (bluePull - redPull) * 0.05; // Adjust sensitivity
                     const next = Math.max(0, Math.min(100, 50 + diff));
 
-                    if (next <= 5 && gameState === 'active') {
+                    if (next <= 2 && gameState === 'active') { // Larger win zones
                         finishGame('Red');
-                    } else if (next >= 95 && gameState === 'active') {
+                    } else if (next >= 98 && gameState === 'active') {
                         finishGame('Blue');
                     }
                     return next;
                 });
             }
         });
-    }, [players.length, gameState]);
+    }, [players.length, gameState, roomCode]);
 
     const finishGame = (winner) => {
+        if (gameState !== 'active') return;
         setWinnerTeam(winner);
         setGameState('finished');
         if (onGameOver) {
-            // Find all players in the winning team and reward them
             const winners = teams[winner.toLowerCase()];
             winners.forEach(p => onGameOver(p.id));
         }
@@ -71,70 +71,84 @@ const TugOfWar = ({ players, roomCode, onGameOver }) => {
             <h1 className="neon-text game-title">TUG OF WAR</h1>
             <div className="team-headers">
                 <div className="team-label red">TEAM RED</div>
-                <div className="vs-icon"><Swords size={40} /></div>
+                <div className="vs-icon"><Swords size={60} /></div>
                 <div className="team-label blue">TEAM BLUE</div>
             </div>
 
             <div className="game-arena">
-                <div className="win-zone red">WIN</div>
+                <div className={`win-zone red ${ropePos < 20 ? 'winning' : ''}`}>WIN</div>
                 <div className="rope-track">
                     <motion.div
                         className="rope"
-                        animate={{ left: `${ropePos}%` }}
-                        transition={{ type: 'spring', damping: 20 }}
+                        animate={{ x: `${(ropePos - 50) * 10}px` }} // Visual scaling of the rope move
+                        transition={{ type: 'spring', damping: 25, stiffness: 120 }}
                     >
                         <div className="rope-flag">
                             <div className="knot" />
                         </div>
                     </motion.div>
                 </div>
-                <div className="win-zone blue">WIN</div>
+                <div className={`win-zone blue ${ropePos > 80 ? 'winning' : ''}`}>WIN</div>
             </div>
 
-            <div className="players-vs">
-                <div className="red-list">
-                    {teams.red.map(p => <div key={p.id} className="p-mini" style={{ background: p.color }}>{p.name?.[0]}</div>)}
+            <div className="players-vs-grid">
+                <div className="team-side red-side">
+                    {teams.red.map(p => (
+                        <div key={p.id} className="p-card" style={{ borderColor: p.color }}>
+                            <div className="p-mini" style={{ background: p.color }}>{p.name?.[0]}</div>
+                            <span>{p.name}</span>
+                        </div>
+                    ))}
                 </div>
-                <div className="blue-list">
-                    {teams.blue.map(p => <div key={p.id} className="p-mini" style={{ background: p.color }}>{p.name?.[0]}</div>)}
+                <div className="team-side blue-side">
+                    {teams.blue.map(p => (
+                        <div key={p.id} className="p-card" style={{ borderColor: p.color }}>
+                            <span>{p.name}</span>
+                            <div className="p-mini" style={{ background: p.color }}>{p.name?.[0]}</div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
             <AnimatePresence>
                 {gameState === 'finished' && (
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="winner-overlay center-all">
-                        <Trophy size={100} color="#ffd700" />
+                    <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="winner-overlay center-all">
+                        <Trophy size={150} color="#ffd700" className="trophy-bounce" />
                         <h1 className={`win-text ${winnerTeam.toLowerCase()}`}>{winnerTeam} TEAM WINS!</h1>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             <style>{`
-                .tug-game { width: 100%; height: 100%; gap: 40px; }
-                .game-title { font-size: 5rem; letter-spacing: 10px; }
-                .team-headers { display: flex; align-items: center; gap: 50px; }
-                .team-label { font-size: 2.5rem; font-weight: 900; }
+                .tug-game { width: 100%; height: 100%; gap: 60px; }
+                .game-title { font-size: 6rem; letter-spacing: 15px; }
+                .team-headers { display: flex; align-items: center; gap: 80px; }
+                .team-label { font-size: 3.5rem; font-weight: 900; }
                 .red { color: #ff4444; text-shadow: 0 0 20px rgba(255,68,68,0.5); }
                 .blue { color: #4444ff; text-shadow: 0 0 20px rgba(68,68,255,0.5); }
                 
-                .game-arena { width: 1000px; height: 150px; display: flex; align-items: center; position: relative; gap: 10px; }
-                .win-zone { width: 80px; height: 100%; border: 3px dashed white; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-weight: 900; opacity: 0.3; }
+                .game-arena { width: 1200px; height: 200px; display: flex; align-items: center; position: relative; gap: 20px; }
+                .win-zone { width: 120px; height: 100%; border: 4px dashed white; border-radius: 30px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.5rem; opacity: 0.2; transition: all 0.3s; }
+                .win-zone.winning { opacity: 0.8; transform: scale(1.1); box-shadow: 0 0 40px currentColor; }
                 .win-zone.red { border-color: #ff4444; color: #ff4444; }
                 .win-zone.blue { border-color: #4444ff; color: #4444ff; }
                 
-                .rope-track { flex: 1; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; position: relative; border: 2px solid var(--glass-border); }
-                .rope { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 100%; height: 10px; background: #8b4513; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-                .rope::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; top: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.2) 10px, rgba(0,0,0,0.2) 20px); }
+                .rope-track { flex: 1; height: 30px; background: rgba(255,b255,255,0.1); border-radius: 15px; position: relative; border: 3px solid var(--glass-border); overflow: hidden; }
+                .rope { position: absolute; top: 50%; left: 0%; transform: translateY(-50%); width: 200%; height: 15px; background: #8b4513; }
+                .rope::after { content: ''; position: absolute; inset: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 15px, rgba(0,0,0,0.3) 15px, rgba(0,0,0,0.3) 30px); }
                 
-                .rope-flag { position: absolute; left: 50%; top: 50%; width: 4px; height: 80px; background: white; transform: translate(-50%, -50%); }
-                .knot { width: 30px; height: 30px; background: #ffaa00; border-radius: 50%; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #ffaa00; }
+                .rope-flag { position: absolute; left: 50%; top: 50%; width: 6px; height: 120px; background: white; transform: translate(-50%, -50%); z-index: 10; }
+                .knot { width: 50px; height: 50px; background: #ffaa00; border-radius: 50%; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 30px #ffaa00; border: 4px solid white; }
 
-                .players-vs { display: flex; justify-content: space-between; width: 800px; }
-                .red-list, .blue-list { display: flex; gap: 10px; }
-                .p-mini { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; border: 2px solid white; }
+                .players-vs-grid { display: flex; justify-content: space-between; width: 1000px; }
+                .team-side { display: flex; flex-direction: column; gap: 15px; }
+                .p-card { display: flex; align-items: center; gap: 15px; padding: 10px 20px; background: rgba(0,0,0,0.3); border-radius: 15px; border: 2px solid; font-weight: 800; font-size: 1.2rem; }
+                .p-mini { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white; }
 
-                .winner-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; border-radius: 40px; }
-                .win-text { font-size: 6rem; margin-top: 20px; }
+                .winner-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; border-radius: 40px; }
+                .win-text { font-size: 8rem; margin-top: 30px; text-shadow: 0 0 50px currentColor; }
+                .trophy-bounce { filter: drop-shadow(0 0 50px #ffd700); animation: bounce 1s infinite alternate; }
+                @keyframes bounce { from{transform:scale(1)} to{transform:scale(1.2)} }
             `}</style>
         </div>
     );

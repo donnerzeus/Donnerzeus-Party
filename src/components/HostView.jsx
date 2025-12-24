@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, onValue, update, set } from 'firebase/database';
-import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame } from 'lucide-react';
+import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame, Heart, Crosshair } from 'lucide-react';
 
 import FastClick from './games/FastClick';
 import ReactionTime from './games/ReactionTime';
@@ -14,6 +14,8 @@ import Steering from './games/Steering';
 import ShakeIt from './games/ShakeIt';
 import TugOfWar from './games/TugOfWar';
 import LavaJump from './games/LavaJump';
+import LoveArrows from './games/LoveArrows';
+import CrabHunt from './games/CrabHunt';
 
 const HostView = ({ roomCode, user, setView }) => {
   const [players, setPlayers] = useState([]);
@@ -96,6 +98,8 @@ const HostView = ({ roomCode, user, setView }) => {
     { id: 'shake-it', name: 'Shake It!', icon: Zap, desc: 'Shake your phone like crazy!' },
     { id: 'tug-of-war', name: 'Tug of War', icon: Swords, desc: 'Mash together to pull the rope!' },
     { id: 'lava-jump', name: 'Lava Jump', icon: Flame, desc: 'Jump over fire obstacles!' },
+    { id: 'love-arrows', name: 'Love Arrows', icon: Heart, desc: 'Follow the arrows as fast as you can!' },
+    { id: 'crab-hunt', name: 'Crab Hunt', icon: Crosshair, desc: '1 vs All: Fisherman vs Crabs!' },
   ];
 
   if (status === 'playing') {
@@ -118,6 +122,8 @@ const HostView = ({ roomCode, user, setView }) => {
           {gameType === 'shake-it' && <ShakeIt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'tug-of-war' && <TugOfWar players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'lava-jump' && <LavaJump players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'love-arrows' && <LoveArrows players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'crab-hunt' && <CrabHunt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
         </div>
       </div>
     );

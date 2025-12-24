@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart } from 'lucide-react';
 
 const ControllerView = ({ roomCode, user, setView }) => {
     const [name, setName] = useState('');
@@ -11,6 +11,8 @@ const ControllerView = ({ roomCode, user, setView }) => {
     const [playerData, setPlayerData] = useState(null);
     const [isError, setIsError] = useState(false);
     const [sensorsActive, setSensorsActive] = useState(false);
+    const [loveSequence, setLoveSequence] = useState([]);
+    const [loveStep, setLoveStep] = useState(0);
 
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -68,6 +70,20 @@ const ControllerView = ({ roomCode, user, setView }) => {
         }
     }, [roomData?.gameType, roomData?.status, sensorsActive, roomCode, user, playerData?.shakeCount]);
 
+    // Love Arrows sequence generation
+    useEffect(() => {
+        if (roomData?.gameType === 'love-arrows' && roomData?.status === 'playing' && loveSequence.length === 0) {
+            generateLoveSequence();
+        }
+    }, [roomData?.gameType, roomData?.status]);
+
+    const generateLoveSequence = () => {
+        const seq = [];
+        for (let i = 0; i < 4; i++) seq.push(Math.floor(Math.random() * 4));
+        setLoveSequence(seq);
+        setLoveStep(0);
+    };
+
     const requestSensorPermission = async () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             try {
@@ -118,11 +134,41 @@ const ControllerView = ({ roomCode, user, setView }) => {
         } else if (roomData.gameType === 'tug-of-war') {
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { score: (playerData?.score || 0) + 1 });
         } else if (roomData.gameType === 'lava-jump') {
-            // Instant jump action
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { action: 'jump' });
             setTimeout(() => {
                 update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { action: 'idle' });
             }, 500);
+        } else if (roomData.gameType === 'love-arrows') {
+            if (val === loveSequence[loveStep]) {
+                const nextStep = loveStep + 1;
+                if (nextStep >= loveSequence.length) {
+                    update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
+                        score: (playerData?.score || 0) + 1,
+                        lastMove: val,
+                        lastClick: Date.now()
+                    });
+                    generateLoveSequence();
+                } else {
+                    setLoveStep(nextStep);
+                    update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { lastMove: val });
+                }
+            } else {
+                // Wrong move: reset sequence
+                setLoveStep(0);
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            }
+        } else if (roomData.gameType === 'crab-hunt') {
+            const step = 5;
+            let nextX = playerData?.posX || 50;
+            let nextY = playerData?.posY || 50;
+            if (val === 0) nextY = Math.max(0, nextY - step);
+            if (val === 1) nextY = Math.min(100, nextY + step);
+            if (val === 2) nextX = Math.max(0, nextX - step);
+            if (val === 3) nextX = Math.min(100, nextX + step);
+
+            const updates = { posX: nextX, posY: nextY };
+            if (type === 'smash') updates.action = 'smash';
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), updates);
         }
     };
 
@@ -314,6 +360,53 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                         <p>Watch the screen and jump over fire!</p>
                                     </div>
                                 )}
+
+                                {roomData.gameType === 'love-arrows' && (
+                                    <div className="love-ui center-all">
+                                        <div className="sequence-display">
+                                            {loveSequence.map((dir, i) => (
+                                                <div key={i} className={`arrow-hint ${i < loveStep ? 'done' : ''} ${i === loveStep ? 'active' : ''}`}>
+                                                    {dir === 0 && <ArrowUp />}
+                                                    {dir === 1 && <ArrowDown />}
+                                                    {dir === 2 && <ArrowLeft />}
+                                                    {dir === 3 && <ArrowRight />}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="arrow-controls">
+                                            <button className="arrow-btn up" onClick={() => handleAction('move', 0)}><ArrowUp size={40} /></button>
+                                            <div className="mid-arrows">
+                                                <button className="arrow-btn left" onClick={() => handleAction('move', 2)}><ArrowLeft size={40} /></button>
+                                                <button className="arrow-btn right" onClick={() => handleAction('move', 3)}><ArrowRight size={40} /></button>
+                                            </div>
+                                            <button className="arrow-btn down" onClick={() => handleAction('move', 1)}><ArrowDown size={40} /></button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {roomData.gameType === 'crab-hunt' && (
+                                    <div className="crab-ui center-all">
+                                        <div className="role-tag">{playerData?.role?.toUpperCase()}</div>
+                                        <div className="arrow-controls">
+                                            <button className="arrow-btn up" onClick={() => handleAction('move', 0)}><ArrowUp size={40} /></button>
+                                            <div className="mid-arrows">
+                                                <button className="arrow-btn left" onClick={() => handleAction('move', 2)}><ArrowLeft size={40} /></button>
+                                                {playerData?.role === 'fisher' ? (
+                                                    <button className="smash-btn" onClick={() => handleAction('smash')}><Crosshair size={50} /></button>
+                                                ) : <div style={{ width: 80 }} />}
+                                                <button className="arrow-btn right" onClick={() => handleAction('move', 3)}><ArrowRight size={40} /></button>
+                                            </div>
+                                            <button className="arrow-btn down" onClick={() => handleAction('move', 1)}><ArrowDown size={40} /></button>
+                                        </div>
+                                        <p>{playerData?.role === 'fisher' ? 'Move target and SMASH crabs!' : 'RUN AWAY from the fisherman!'}</p>
+                                        {playerData?.status === 'dead' && (
+                                            <div className="dead-overlay center-all">
+                                                <Skull size={100} />
+                                                <h2>YOU ARE SMASHED!</h2>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -371,6 +464,20 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .pull-btn.blue { background: #4444ff; box-shadow: 0 0 30px rgba(68,68,255,0.5); }
                 
                 .jump-btn { background: #ff8800; box-shadow: 0 0 30px rgba(255,136,0,0.5); }
+
+                .arrow-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 20px 0; }
+                .mid-arrows { display: flex; gap: 10px; align-items: center; }
+                .arrow-btn { width: 80px; height: 80px; border-radius: 20px; border: 2px solid var(--glass-border); background: rgba(255,255,255,0.1); color: white; display: flex; align-items: center; justify-content: center; }
+                .arrow-btn:active { background: var(--accent-primary); color: black; }
+                
+                .sequence-display { display: flex; gap: 15px; margin-bottom: 20px; }
+                .arrow-hint { width: 60px; height: 60px; border-radius: 12px; border: 2px solid var(--glass-border); display: flex; align-items: center; justify-content: center; opacity: 0.3; }
+                .arrow-hint.active { opacity: 1; border-color: #ff00aa; color: #ff00aa; transform: scale(1.2); box-shadow: 0 0 15px #ff00aa; }
+                .arrow-hint.done { opacity: 1; border-color: #00ff44; color: #00ff44; }
+
+                .role-tag { font-size: 1.5rem; font-weight: 900; color: var(--accent-primary); letter-spacing: 3px; }
+                .smash-btn { width: 100px; height: 100px; border-radius: 50%; background: #ff4444; border: none; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255,68,68,0.5); }
+                .dead-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; border-radius: 40px; color: #ff4444; }
             `}</style>
         </div>
     );
