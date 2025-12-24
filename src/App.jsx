@@ -125,7 +125,7 @@ function App() {
         )}
       </AnimatePresence>
 
-      <style jsx>{`
+      <style>{`
         .app-container {
           display: flex;
           align-items: center;
