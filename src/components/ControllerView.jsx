@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain } from 'lucide-react';
 
 const ControllerView = ({ roomCode, user, setView }) => {
     const [name, setName] = useState('');
@@ -13,6 +13,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
     const [sensorsActive, setSensorsActive] = useState(false);
     const [loveSequence, setLoveSequence] = useState([]);
     const [loveStep, setLoveStep] = useState(0);
+    const [memoryInput, setMemoryInput] = useState([]);
 
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -83,6 +84,14 @@ const ControllerView = ({ roomCode, user, setView }) => {
         setLoveSequence(seq);
         setLoveStep(0);
     };
+
+    // Reset memory input when round changes
+    useEffect(() => {
+        if (roomData?.gamePhase === 'showing') {
+            setMemoryInput([]);
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { memoryStatus: null });
+        }
+    }, [roomData?.gamePhase]);
 
     const requestSensorPermission = async () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -184,6 +193,29 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 updates.distance = (playerData?.distance || 0) + 1;
             }
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), updates);
+        } else if (roomData.gameType === 'book-squirm') {
+            const step = 8;
+            let nextX = playerData?.posX || 50;
+            if (val === 2) nextX = Math.max(0, nextX - step);
+            if (val === 3) nextX = Math.min(100, nextX + step);
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { posX: nextX });
+        } else if (roomData.gameType === 'memory-match') {
+            if (roomData.gamePhase !== 'input' || playerData?.memoryStatus) return;
+            const nextInput = [...memoryInput, val];
+            setMemoryInput(nextInput);
+
+            const targetSeq = roomData.currentSequence || [];
+            // Check if wrong
+            if (val !== targetSeq[nextInput.length - 1]) {
+                update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { memoryStatus: 'fail' });
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            } else if (nextInput.length === targetSeq.length) {
+                update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
+                    memoryStatus: 'success',
+                    score: (playerData?.score || 0) + 1
+                });
+                if (navigator.vibrate) navigator.vibrate(100);
+            }
         }
     };
 
@@ -455,6 +487,41 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                         </div>
                                     </div>
                                 )}
+
+                                {roomData.gameType === 'book-squirm' && (
+                                    <div className="book-ui center-all">
+                                        <div className="arrow-controls side-only">
+                                            <button className="arrow-btn" onClick={() => handleAction('move', 2)}><ArrowLeft size={50} /></button>
+                                            <BookOpen size={100} className="neon-text" />
+                                            <button className="arrow-btn" onClick={() => handleAction('move', 3)}><ArrowRight size={50} /></button>
+                                        </div>
+                                        <div className="pos-bar">
+                                            <div className="indicator" style={{ left: `${playerData?.posX || 50}%` }} />
+                                        </div>
+                                        <p>STAY IN THE HOLE!</p>
+                                    </div>
+                                )}
+
+                                {roomData.gameType === 'memory-match' && (
+                                    <div className="memory-ui center-all">
+                                        <h3>{roomData.gamePhase === 'showing' ? 'MEMORIZE!' : 'INPUT NOW!'}</h3>
+                                        <div className="simon-grid">
+                                            {['#ff4444', '#44ff44', '#4444ff', '#ffff44'].map((c, i) => (
+                                                <button
+                                                    key={i}
+                                                    className="simon-pad"
+                                                    style={{ backgroundColor: c, opacity: roomData.gamePhase === 'input' ? 1 : 0.3 }}
+                                                    onClick={() => handleAction('input', i)}
+                                                    disabled={roomData.gamePhase !== 'input' || playerData?.memoryStatus}
+                                                />
+                                            ))}
+                                        </div>
+                                        <div className="input-progress">
+                                            {memoryInput.map((_, i) => <div key={i} className="dot active" />)}
+                                            {Array(Math.max(0, (roomData.currentSequence?.length || 0) - memoryInput.length)).fill(0).map((_, i) => <div key={i} className="dot" />)}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -540,6 +607,14 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .racer-btn.main { width: 150px; height: 150px; background: linear-gradient(135deg, #00f2ff, #7000ff); font-weight: 900; font-size: 1.5rem; gap: 10px; }
                 .dist-track { width: 80%; height: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; overflow: hidden; }
                 .dist-track .fill { height: 100%; background: #00f2ff; box-shadow: 0 0 10px #00f2ff; transition: width 0.3s; }
+
+                .side-only { flex-direction: row; align-items: center; gap: 30px; }
+                .pos-bar { width: 90%; height: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; position: relative; margin-top: 20px; }
+                .pos-bar .indicator { width: 30px; height: 30px; background: var(--accent-primary); border-radius: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px var(--accent-primary); transition: left 0.2s; }
+
+                .input-progress { display: flex; gap: 10px; margin-top: 20px; }
+                .input-progress .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+                .input-progress .dot.active { background: #00f2ff; box-shadow: 0 0 10px #00f2ff; }
             `}</style>
         </div>
     );

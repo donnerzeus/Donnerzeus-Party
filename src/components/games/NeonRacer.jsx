@@ -39,7 +39,7 @@ const NeonRacer = ({ players, roomCode, onGameOver }) => {
 
                 // Collision check
                 players.forEach(p => {
-                    const plane = p.lane || 1; // 0, 1, 2
+                    const plane = p.lane ?? 1; // 0, 1, 2
                     updated.forEach(o => {
                         if (o.lane === plane && o.y > 80 && o.y < 95) {
                             // COLLISION! Slow down distance
@@ -109,7 +109,7 @@ const NeonRacer = ({ players, roomCode, onGameOver }) => {
                                         key={p.id}
                                         className="player-car-wrapper"
                                         animate={{
-                                            left: `${(p.lane || 1) * 33.3 + 16.6}%`,
+                                            left: `${(p.lane ?? 1) * 33.3 + 16.6}%`,
                                             scale: (p.distance || 0) / 100 + 0.5
                                         }}
                                         transition={{ type: 'spring', damping: 15 }}
@@ -153,7 +153,7 @@ const NeonRacer = ({ players, roomCode, onGameOver }) => {
                 .headlights { position: absolute; top: -10px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 10px; }
                 .headlights::before, .headlights::after { content: ''; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 -10px 20px #fff; }
 
-                .dist-gauge { width: 80px; height: 6px; background: rgba(255,b255,255,0.2); border-radius: 3px; overflow: hidden; }
+                .dist-gauge { width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
                 .dist-fill { height: 100%; background: #00f2ff; box-shadow: 0 0 10px #00f2ff; }
                 .car-name { font-size: 0.9rem; font-weight: 800; background: rgba(0,0,0,0.8); padding: 2px 10px; border-radius: 5px; }
             `}</style>

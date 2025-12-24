@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, onValue, update, set } from 'firebase/database';
-import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame, Heart, Crosshair, Mountain, Car } from 'lucide-react';
+import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame, Heart, Crosshair, Mountain, Car, BookOpen, Brain } from 'lucide-react';
 
 import FastClick from './games/FastClick';
 import ReactionTime from './games/ReactionTime';
@@ -18,6 +18,8 @@ import LoveArrows from './games/LoveArrows';
 import CrabHunt from './games/CrabHunt';
 import SocialClimbers from './games/SocialClimbers';
 import NeonRacer from './games/NeonRacer';
+import BookSquirm from './games/BookSquirm';
+import MemoryMatch from './games/MemoryMatch';
 
 const HostView = ({ roomCode, user, setView }) => {
   const [players, setPlayers] = useState([]);
@@ -104,6 +106,8 @@ const HostView = ({ roomCode, user, setView }) => {
     { id: 'crab-hunt', name: 'Crab Hunt', icon: Crosshair, desc: '1 vs All: Fisherman vs Crabs!' },
     { id: 'social-climbers', name: 'Social Climbers', icon: Mountain, desc: 'CLIMB! But stop during the storm!' },
     { id: 'neon-racer', name: 'Neon Racer', icon: Car, desc: 'Race and avoid the obstacles!' },
+    { id: 'book-squirm', name: 'Book Squirm', icon: BookOpen, desc: 'Avoid the paper by fitting through holes!' },
+    { id: 'memory-match', name: 'Memory Match', icon: Brain, desc: 'Remember the sequence!' },
   ];
 
   if (status === 'playing') {
@@ -130,6 +134,8 @@ const HostView = ({ roomCode, user, setView }) => {
           {gameType === 'crab-hunt' && <CrabHunt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'social-climbers' && <SocialClimbers players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'neon-racer' && <NeonRacer players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'book-squirm' && <BookSquirm players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'memory-match' && <MemoryMatch players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
         </div>
       </div>
     );
@@ -238,9 +244,9 @@ const HostView = ({ roomCode, user, setView }) => {
         .score { font-weight: 800; color: var(--accent-secondary); }
 
         /* Center Section */
-        .lobby-center { display: flex; flex-direction: column; }
-        .game-grid-container { flex: 1; display: flex; flex-direction: column; gap: 20px; }
-        .games-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; padding-right: 10px; }
+        .lobby-center { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+        .game-grid-container { flex: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
+        .games-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; overflow-y: auto; padding-right: 15px; flex: 1; }
         .game-card { padding: 25px; cursor: pointer; display: flex; align-items: center; gap: 20px; position: relative; border-color: rgba(255,255,255,0.05); }
         .game-card.active { border-color: var(--accent-primary); background: rgba(0, 242, 255, 0.05); }
         .game-card .icon { color: var(--accent-primary); }
