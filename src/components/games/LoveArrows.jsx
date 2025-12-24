@@ -53,14 +53,15 @@ const LoveArrows = ({ players, roomCode, onGameOver }) => {
     useEffect(() => {
         if (gameState === 'results') {
             let max = -1;
-            let winner = null;
+            let winnerId = null;
             players.forEach(p => {
-                if ((scores[p.id] || 0) > max) {
-                    max = scores[p.id] || 0;
-                    winner = p;
+                const score = scores[p.id] || 0;
+                if (score > max) {
+                    max = score;
+                    winnerId = p.id;
                 }
             });
-            if (onGameOver && winner) onGameOver(winner.id);
+            if (onGameOver) onGameOver(winnerId);
         }
     }, [gameState]);
 
@@ -78,7 +79,7 @@ const LoveArrows = ({ players, roomCode, onGameOver }) => {
 
                 {(gameState === 'playing' || gameState === 'results') && (
                     <div className="love-arena center-all">
-                        <div className="game-hud">
+                        <div className="love-hud">
                             <div className="timer glass-panel">TIME: {timeLeft}s</div>
                         </div>
 
@@ -116,7 +117,7 @@ const LoveArrows = ({ players, roomCode, onGameOver }) => {
                 @keyframes heartPulse { from{scale:1} to{scale:1.2} }
                 .big-cd { font-size: 10rem; }
                 
-                .game-hud { position: absolute; top: 40px; }
+                .love-hud { position: absolute; top: 100px; z-index: 5; }
                 .timer { padding: 15px 40px; font-size: 2rem; font-weight: 900; border-radius: 20px; border-color: var(--accent-tertiary); }
                 
                 .players-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 30px; width: 100%; max-width: 1200px; margin-top: 100px; }

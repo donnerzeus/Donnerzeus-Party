@@ -62,7 +62,10 @@ const TugOfWar = ({ players, roomCode, onGameOver }) => {
         setGameState('finished');
         if (onGameOver) {
             const winners = teams[winner.toLowerCase()];
+            // Reward all winners
             winners.forEach(p => onGameOver(p.id));
+            // Ensure HostView knows it's over even if no winners (though here there are)
+            if (winners.length === 0) onGameOver(null);
         }
     };
 

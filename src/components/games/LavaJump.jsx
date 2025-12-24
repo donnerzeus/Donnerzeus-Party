@@ -89,11 +89,12 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
     useEffect(() => {
         if (gameState === 'results') {
             const alive = players.filter(p => !deadPlayers.has(p.id));
-            if (onGameOver && alive.length > 0) {
-                // Reward first survivor or all? Let's reward all survivors
-                alive.forEach(p => onGameOver(p.id));
-            } else if (onGameOver && alive.length === 0) {
-                onGameOver(); // No winner
+            if (onGameOver) {
+                if (alive.length > 0) {
+                    alive.forEach(p => onGameOver(p.id));
+                } else {
+                    onGameOver(null); // No survivors
+                }
             }
         }
     }, [gameState]);
@@ -111,7 +112,7 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
 
                 {(gameState === 'playing' || gameState === 'results') && (
                     <div className="lava-arena">
-                        <div className="game-hud">
+                        <div className="lava-hud">
                             <div className="timer-box glass-panel"><Activity size={24} /> <span>{gameTime}s</span></div>
                             <div className="survivors-box glass-panel">LIVE: {players.length - deadPlayers.size}</div>
                         </div>
@@ -162,7 +163,7 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
                 .big-cd { font-size: 15rem; font-weight: 900; }
                 
                 .lava-arena { width: 100%; height: 100%; position: relative; }
-                .game-hud { position: absolute; top: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 40px; z-index: 10; }
+                .lava-hud { position: absolute; top: 100px; left: 0; right: 0; display: flex; justify-content: center; gap: 40px; z-index: 5; }
                 .timer-box, .survivors-box { padding: 15px 30px; font-size: 2rem; font-weight: 900; display: flex; align-items: center; gap: 15px; border-radius: 20px; }
                 
                 .stage-area { width: 100%; height: 100%; position: relative; background: radial-gradient(circle at bottom, #300, transparent); }

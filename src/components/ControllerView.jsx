@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain } from 'lucide-react';
 
 const ControllerView = ({ roomCode, user, setView }) => {
     const [name, setName] = useState('');
@@ -168,6 +168,21 @@ const ControllerView = ({ roomCode, user, setView }) => {
 
             const updates = { posX: nextX, posY: nextY };
             if (type === 'smash') updates.action = 'smash';
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), updates);
+        } else if (roomData.gameType === 'social-climbers') {
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
+                climbPos: (playerData?.climbPos || 0) + 1,
+                lastClick: Date.now()
+            });
+        } else if (roomData.gameType === 'neon-racer') {
+            const updates = {};
+            if (type === 'move') {
+                const currentLane = playerData?.lane ?? 1;
+                if (val === 2) updates.lane = Math.max(0, currentLane - 1);
+                if (val === 3) updates.lane = Math.min(2, currentLane + 1);
+            } else {
+                updates.distance = (playerData?.distance || 0) + 1;
+            }
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), updates);
         }
     };
@@ -407,6 +422,39 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                         )}
                                     </div>
                                 )}
+
+                                {roomData.gameType === 'social-climbers' && (
+                                    <div className="climb-ui center-all">
+                                        <motion.button
+                                            whileTap={{ scale: 0.9 }}
+                                            className="action-circle climb-btn"
+                                            onClick={handleAction}
+                                            disabled={roomData.storm}
+                                        >
+                                            CLIMB!
+                                        </motion.button>
+                                        {roomData.storm && <div className="storm-warning"><AlertCircle color="#ff0044" /> STORM: STOP!</div>}
+                                        <div className="progress-mini">
+                                            <div className="fill" style={{ width: `${playerData?.climbPos || 0}%` }} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {roomData.gameType === 'neon-racer' && (
+                                    <div className="racer-ui center-all">
+                                        <div className="racer-controls">
+                                            <button className="racer-btn side" onClick={() => handleAction('move', 2)}><ArrowLeft size={40} /></button>
+                                            <motion.button whileTap={{ scale: 0.9 }} className="racer-btn main" onClick={() => handleAction('gas')}>
+                                                <Zap size={50} />
+                                                GAS!
+                                            </motion.button>
+                                            <button className="racer-btn side" onClick={() => handleAction('move', 3)}><ArrowRight size={40} /></button>
+                                        </div>
+                                        <div className="dist-track">
+                                            <div className="fill" style={{ width: `${playerData?.distance || 0}%` }} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -478,6 +526,20 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .role-tag { font-size: 1.5rem; font-weight: 900; color: var(--accent-primary); letter-spacing: 3px; }
                 .smash-btn { width: 100px; height: 100px; border-radius: 50%; background: #ff4444; border: none; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255,68,68,0.5); }
                 .dead-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; border-radius: 40px; color: #ff4444; }
+
+                .climb-btn { background: linear-gradient(135deg, #111, #444); border: 4px solid var(--accent-primary); box-shadow: 0 0 30px rgba(0,242,255,0.3); }
+                .climb-btn:disabled { opacity: 0.3; filter: grayscale(1); }
+                .storm-warning { color: #ff0044; font-weight: 800; font-size: 1.5rem; margin-top: 20px; display: flex; align-items: center; gap: 10px; }
+                .progress-mini { width: 100%; height: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin-top: 30px; overflow: hidden; }
+                .progress-mini .fill { height: 100%; background: var(--accent-primary); transition: width 0.3s; }
+
+                .racer-ui { width: 100%; gap: 30px; }
+                .racer-controls { display: flex; align-items: center; gap: 20px; }
+                .racer-btn { border-radius: 20px; border: 2px solid var(--glass-border); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); }
+                .racer-btn.side { width: 80px; height: 120px; }
+                .racer-btn.main { width: 150px; height: 150px; background: linear-gradient(135deg, #00f2ff, #7000ff); font-weight: 900; font-size: 1.5rem; gap: 10px; }
+                .dist-track { width: 80%; height: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; overflow: hidden; }
+                .dist-track .fill { height: 100%; background: #00f2ff; box-shadow: 0 0 10px #00f2ff; transition: width 0.3s; }
             `}</style>
         </div>
     );

@@ -16,6 +16,8 @@ import TugOfWar from './games/TugOfWar';
 import LavaJump from './games/LavaJump';
 import LoveArrows from './games/LoveArrows';
 import CrabHunt from './games/CrabHunt';
+import SocialClimbers from './games/SocialClimbers';
+import NeonRacer from './games/NeonRacer';
 
 const HostView = ({ roomCode, user, setView }) => {
   const [players, setPlayers] = useState([]);
@@ -100,6 +102,8 @@ const HostView = ({ roomCode, user, setView }) => {
     { id: 'lava-jump', name: 'Lava Jump', icon: Flame, desc: 'Jump over fire obstacles!' },
     { id: 'love-arrows', name: 'Love Arrows', icon: Heart, desc: 'Follow the arrows as fast as you can!' },
     { id: 'crab-hunt', name: 'Crab Hunt', icon: Crosshair, desc: '1 vs All: Fisherman vs Crabs!' },
+    { id: 'social-climbers', name: 'Social Climbers', icon: Mountain, desc: 'CLIMB! But stop during the storm!' },
+    { id: 'neon-racer', name: 'Neon Racer', icon: Car, desc: 'Race and avoid the obstacles!' },
   ];
 
   if (status === 'playing') {
@@ -124,6 +128,8 @@ const HostView = ({ roomCode, user, setView }) => {
           {gameType === 'lava-jump' && <LavaJump players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'love-arrows' && <LoveArrows players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'crab-hunt' && <CrabHunt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'social-climbers' && <SocialClimbers players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'neon-racer' && <NeonRacer players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
         </div>
       </div>
     );
@@ -257,7 +263,8 @@ const HostView = ({ roomCode, user, setView }) => {
 
         /* HUD */
         .game-view { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
-        .game-hud { position: absolute; top: 10px; right: 10px; z-index: 1000; }
+        .game-hud { position: absolute; top: 20px; right: 20px; z-index: 9999; }
+        .game-hud .neon-button { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
         .active-game-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
       `}</style>
     </div>

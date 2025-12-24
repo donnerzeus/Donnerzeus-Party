@@ -16,6 +16,9 @@ function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
+    const savedCode = localStorage.getItem('party_roomCode');
+    const savedView = localStorage.getItem('party_view');
+
     signInAnonymously(auth).catch(console.error);
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -24,8 +27,14 @@ function App() {
       const params = new URLSearchParams(window.location.search);
       const room = params.get('room');
       if (room) {
-        setRoomCode(room.toUpperCase());
+        const upCode = room.toUpperCase();
+        setRoomCode(upCode);
         setView('controller');
+        localStorage.setItem('party_roomCode', upCode);
+        localStorage.setItem('party_view', 'controller');
+      } else if (savedCode && savedView) {
+        setRoomCode(savedCode);
+        setView(savedView);
       } else {
         setView('landing');
       }
@@ -33,6 +42,16 @@ function App() {
 
     return () => unsubscribe();
   }, []);
+
+  const setAndPersistView = (v) => {
+    setView(v);
+    localStorage.setItem('party_view', v);
+  };
+
+  const setAndPersistRoom = (c) => {
+    setRoomCode(c);
+    localStorage.setItem('party_roomCode', c);
+  };
 
   const generateRoomCode = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -45,20 +64,20 @@ function App() {
 
   const startHost = () => {
     const code = generateRoomCode();
-    setRoomCode(code);
+    setAndPersistRoom(code);
     set(ref(db, `rooms/${code}`), {
       host: user.uid,
       status: 'lobby',
       createdAt: Date.now(),
       gameType: ''
     });
-    setView('host');
+    setAndPersistView('host');
   };
 
   const joinRoom = (code) => {
     if (!code || code.length !== 4) return;
-    setRoomCode(code.toUpperCase());
-    setView('controller');
+    setAndPersistRoom(code.toUpperCase());
+    setAndPersistView('controller');
   };
 
   return (
@@ -98,9 +117,9 @@ function App() {
             </div>
           </motion.div>
         ) : view === 'host' ? (
-          <HostView key="host" roomCode={roomCode} user={user} setView={setView} />
+          <HostView key="host" roomCode={roomCode} user={user} setView={setAndPersistView} />
         ) : view === 'controller' ? (
-          <ControllerView key="controller" roomCode={roomCode} user={user} setView={setView} />
+          <ControllerView key="controller" roomCode={roomCode} user={user} setView={setAndPersistView} />
         ) : null}
       </AnimatePresence>
 
