@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, onValue, update, set } from 'firebase/database';
-import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame, Heart, Crosshair } from 'lucide-react';
+import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame, Heart, Crosshair, Mountain, Car } from 'lucide-react';
 
 import FastClick from './games/FastClick';
 import ReactionTime from './games/ReactionTime';
