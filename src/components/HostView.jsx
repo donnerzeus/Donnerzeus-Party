@@ -246,26 +246,31 @@ const HostView = ({ roomCode, user, setView }) => {
           </button>
         </div>
 
-        <div className="active-game-container">
-          {gameType === 'fast-click' && <FastClick players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'reaction-time' && <ReactionTime players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'simon-says' && <SimonSays players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'quick-draw' && <QuickDraw players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'hot-potato' && <HotPotato players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'steering' && <Steering players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'shake-it' && <ShakeIt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'tug-of-war' && <TugOfWar players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'lava-jump' && <LavaJump players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'love-arrows' && <LoveArrows players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'crab-hunt' && <CrabHunt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'social-climbers' && <SocialClimbers players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'neon-racer' && <NeonRacer players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'book-squirm' && <BookSquirm players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'memory-match' && <MemoryMatch players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'math-race' && <MathRace players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'shark-attack' && <SharkAttack players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'boss-battle' && <BossBattle players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
-          {gameType === 'rhythm-hero' && <RhythmHero players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+        <div className="active-game-container" style={{ position: 'relative', zIndex: 10 }}>
+          {gameType === 'boss-battle' ? (
+            <BossBattle players={players} roomCode={roomCode} onGameOver={handleGameOver} />
+          ) : (
+            <>
+              {gameType === 'fast-click' && <FastClick players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'reaction-time' && <ReactionTime players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'simon-says' && <SimonSays players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'quick-draw' && <QuickDraw players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'hot-potato' && <HotPotato players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'steering' && <Steering players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'shake-it' && <ShakeIt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'tug-of-war' && <TugOfWar players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'lava-jump' && <LavaJump players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'love-arrows' && <LoveArrows players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'crab-hunt' && <CrabHunt players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'social-climbers' && <SocialClimbers players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'neon-racer' && <NeonRacer players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'book-squirm' && <BookSquirm players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'memory-match' && <MemoryMatch players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'math-race' && <MathRace players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'shark-attack' && <SharkAttack players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+              {gameType === 'rhythm-hero' && <RhythmHero players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+            </>
+          )}
 
           {isGameOver && isTournament && tournamentCount >= 5 && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="tournament-celebration glass-panel center-all">
