@@ -127,7 +127,9 @@ const HostView = ({ roomCode, user, setView }) => {
 
     sounds.playStart();
 
-    const gameToStart = forcedGame || selectedGame;
+    // Safety: check if forcedGame is a string (game ID) or an event object
+    const gameToStart = (typeof forcedGame === 'string') ? forcedGame : selectedGame;
+
     updates[`rooms/${roomCode}/status`] = 'playing';
     updates[`rooms/${roomCode}/gameType`] = gameToStart;
     updates[`rooms/${roomCode}/gamePhase`] = 'starting';
