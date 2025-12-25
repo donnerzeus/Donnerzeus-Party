@@ -15,15 +15,21 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [shake, setShake] = useState(false);
 
+    // Initial state sync to Firebase
     useEffect(() => {
         if (gameState === 'intro') {
             sounds.playStart();
+            // Ensure Firebase has initial boss state for Controller
+            update(ref(db, `rooms/${roomCode}`), {
+                bossHp: 1000,
+                teamEnergy: 100,
+                gamePhase: 'starting'
+            });
+
             const timer = setTimeout(() => {
                 setGameState('playing');
                 update(ref(db, `rooms/${roomCode}`), {
-                    gamePhase: 'playing',
-                    bossHp: 1000,
-                    teamEnergy: 100
+                    gamePhase: 'playing'
                 });
             }, 3000);
             return () => clearTimeout(timer);
@@ -69,8 +75,8 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
         // Timer Loop
         const timerInterval = setInterval(() => {
             setTimeLeft(t => {
-                if (t <= 1) return 0;
-                return t - 1;
+                const next = Math.max(0, t - 1);
+                return next;
             });
         }, 1000);
 
@@ -156,8 +162,14 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
             </div>
 
             <AnimatePresence mode="wait">
-                {gameState === 'intro' && (
-                    <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 2, opacity: 0 }} className="boss-intro center-all">
+                {gameState === 'intro' ? (
+                    <motion.div
+                        key="intro"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 2, opacity: 0 }}
+                        className="boss-intro center-all absolute-center"
+                    >
                         <div className="intro-glow" />
                         <motion.div animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="boss-shadow">
                             <Skull size={250} color="#ff0044" />
@@ -165,10 +177,8 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
                         <h1 className="neon-text title giant">FINAL DEFIANCE</h1>
                         <p className="subtext">COOPERATE OR PERISH</p>
                     </motion.div>
-                )}
-
-                {gameState === 'playing' && (
-                    <div className="arena">
+                ) : gameState === 'playing' ? (
+                    <div className="arena absolute-center">
                         <motion.div
                             className={`boss-entity ${bossState} ${isEnraged ? 'enraged-mode' : ''}`}
                             animate={{
@@ -219,10 +229,13 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
                             </motion.div>
                         ))}
                     </div>
-                )}
-
-                {(gameState === 'victory' || gameState === 'defeat') && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`boss-result ${gameState} center-all`}>
+                ) : (
+                    <motion.div
+                        key="result"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className={`boss-result ${gameState} center-all absolute-center`}
+                    >
                         <div className="result-content glass-panel center-all">
                             {gameState === 'victory' ? (
                                 <>
@@ -262,11 +275,12 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
                 .timer-badge .label { font-size: 0.6rem; color: #ffd700; font-weight: 900; }
                 .timer-badge .val { font-size: 2rem; color: #ffd700; font-weight: 800; font-family: monospace; }
 
+                .absolute-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
                 .boss-intro { z-index: 200; gap: 30px; text-align: center; }
                 .intro-glow { position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(70,0,150,0.3) 0%, transparent 70%); filter: blur(50px); z-index: -1; }
                 .subtext { font-size: 1.5rem; color: var(--text-dim); letter-spacing: 5px; font-weight: 800; }
 
-                .arena { width: 100%; height: 100%; position: relative; }
+                .arena { z-index: 10; }
                 .boss-entity { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 10; filter: drop-shadow(0 0 50px rgba(70,0,150,0.5)); }
                 .boss-aura { position: absolute; inset: -50px; border: 2px solid rgba(70,0,150,0.2); border-radius: 50%; animation: aura-pulse 3s infinite; }
                 @keyframes aura-pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.5); opacity: 0; } }
@@ -283,7 +297,7 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
                 @keyframes flicker { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
 
                 .vfx { position: absolute; pointer-events: none; z-index: 100; }
-                .boss-result { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; }
+                .boss-result { background: rgba(0,0,0,0.95); z-index: 1000; }
                 .result-content { padding: 60px; border-radius: 40px; gap: 40px; max-width: 800px; border: 4px solid currentColor; }
                 .giant { font-size: 5rem !important; }
             `}</style>

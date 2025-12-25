@@ -86,7 +86,7 @@ const HostView = ({ roomCode, user, setView }) => {
     });
   };
 
-  const startGame = () => {
+  const startGame = (forcedGame = null) => {
     setIsGameOver(false);
     const updates = {};
     players.forEach(p => {
@@ -97,14 +97,18 @@ const HostView = ({ roomCode, user, setView }) => {
       updates[`rooms/${roomCode}/players/${p.id}/posX`] = 50;
       updates[`rooms/${roomCode}/players/${p.id}/posY`] = 50;
       updates[`rooms/${roomCode}/players/${p.id}/shakeCount`] = 0;
+      updates[`rooms/${roomCode}/players/${p.id}/status`] = 'alive';
     });
 
     sounds.playStart();
 
+    const gameToStart = forcedGame || selectedGame;
     updates[`rooms/${roomCode}/status`] = 'playing';
-    updates[`rooms/${roomCode}/gameType`] = selectedGame;
+    updates[`rooms/${roomCode}/gameType`] = gameToStart;
     updates[`rooms/${roomCode}/gamePhase`] = 'starting';
     updates[`rooms/${roomCode}/startedAt`] = Date.now();
+    updates[`rooms/${roomCode}/bossHp`] = null;
+    updates[`rooms/${roomCode}/teamEnergy`] = null;
 
     update(ref(db), updates);
   };
