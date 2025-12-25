@@ -209,7 +209,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
             if (val === 1) nextY = Math.min(100, nextY + step);
             if (val === 2) nextX = Math.max(0, nextX - step);
             if (val === 3) nextX = Math.min(100, nextX + step);
-            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { lobbyX: nextX, lobbyY: nextY });
+            if (user?.uid) update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { lobbyX: nextX, lobbyY: nextY });
             return;
         }
 
@@ -230,10 +230,12 @@ const ControllerView = ({ roomCode, user, setView }) => {
 
         if (type === 'boss-attack' || type === 'boss-heal') {
             const actionId = Date.now() + Math.random();
-            update(ref(db, `rooms/${roomCode}/bossActions/${actionId}`), {
-                playerId: user.uid,
-                type: type === 'boss-attack' ? 'attack' : 'heal'
-            });
+            if (user?.uid) {
+                update(ref(db, `rooms/${roomCode}/bossActions/${actionId}`), {
+                    playerId: user.uid,
+                    type: type === 'boss-attack' ? 'attack' : 'heal'
+                });
+            }
             return;
         }
 
@@ -895,6 +897,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .boss-btn { height: 160px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; border: none; color: white; font-weight: 800; font-size: 1.2rem; }
                 .boss-btn.attack { background: linear-gradient(135deg, #ff4400, #ff0044); box-shadow: 0 10px 30px rgba(255,0,68,0.4); }
                 .boss-btn.heal { background: linear-gradient(135deg, #00ff44, #008822); box-shadow: 0 10px 30px rgba(0,255,68,0.3); }
+
+                .shark-ui { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+                .shark-ui h2 { color: #ff0044; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
+                .shark-ui p { font-size: 0.9rem; opacity: 0.8; margin-bottom: 20px; }
             `}</style>
         </div>
     );
