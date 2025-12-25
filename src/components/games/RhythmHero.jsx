@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
 import { ref, update, onValue, set } from 'firebase/database';
-import { Music, Zap, Star, Disc } from 'lucide-react';
+import { Music as MusicIcon, Zap, Star, Disc } from 'lucide-react';
 import { sounds } from '../../utils/sounds';
 
 const COLORS = ['#ff4444', '#44ff44', '#4444ff', '#ffff44'];
@@ -98,7 +98,7 @@ const RhythmHero = ({ players, roomCode, onGameOver }) => {
         <div className="rhythm-game center-all">
             <div className="game-hud">
                 <div className="hud-item glass-panel timer accent">
-                    <Music size={24} />
+                    <MusicIcon size={24} />
                     <span>{Math.ceil(timeLeft)}s</span>
                 </div>
             </div>

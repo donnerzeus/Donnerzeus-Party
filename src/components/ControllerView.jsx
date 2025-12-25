@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator, Ghost as Shark, Skull } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator, Ghost as Shark, Skull, Music as MusicIcon, PenTool } from 'lucide-react';
 
 const HoldButton = ({ children, className, onAction }) => {
     const timer = useRef(null);
@@ -472,7 +472,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
 
                                 {roomData.gameType === 'rhythm-hero' && (
                                     <div className="rhythm-controls center-all">
-                                        <Music size={60} className="neon-text" />
+                                        <MusicIcon size={60} className="neon-text" />
                                         <h3>HIT THE BEAT!</h3>
                                         <div className="rhythm-grid">
                                             {['#ff4444', '#44ff44', '#4444ff', '#ffff44'].map((color, i) => (
