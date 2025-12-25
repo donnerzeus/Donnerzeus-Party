@@ -22,6 +22,7 @@ import BookSquirm from './games/BookSquirm';
 import MemoryMatch from './games/MemoryMatch';
 import MathRace from './games/MathRace';
 import SharkAttack from './games/SharkAttack';
+import BossBattle from './games/BossBattle';
 import { sounds } from '../utils/sounds';
 
 const HostView = ({ roomCode, user, setView }) => {
@@ -144,22 +145,25 @@ const HostView = ({ roomCode, user, setView }) => {
     }
     update(ref(db, `rooms/${roomCode}`), { gamePhase: 'finished' });
 
-    if (isTournament && tournamentCount < 4) { // Play 5 games total
-      setTimeout(() => {
-        const nextGame = games[Math.floor(Math.random() * games.length)].id;
-        const updates = {};
-        players.forEach(p => {
-          updates[`rooms/${roomCode}/players/${p.id}/score`] = 0;
-          updates[`rooms/${roomCode}/players/${p.id}/distance`] = 0;
-          updates[`rooms/${roomCode}/players/${p.id}/action`] = 'idle';
-        });
-        updates[`rooms/${roomCode}/status`] = 'playing';
-        updates[`rooms/${roomCode}/gameType`] = nextGame;
-        updates[`rooms/${roomCode}/gamePhase`] = 'starting';
-        update(ref(db), updates);
+    if (isTournament) {
+      if (tournamentCount < 4) { // Rounds 1-4
         setTournamentCount(prev => prev + 1);
-        setIsGameOver(false);
-      }, 5000);
+        setTimeout(() => {
+          const normalGames = games.filter(g => g.id !== 'boss-battle');
+          const nextGame = normalGames[Math.floor(Math.random() * normalGames.length)].id;
+          setSelectedGame(nextGame);
+          startGame(nextGame);
+        }, 5000);
+      } else if (tournamentCount === 4) { // FINAL BOSS
+        setTournamentCount(5);
+        setTimeout(() => {
+          setSelectedGame('boss-battle');
+          startGame('boss-battle');
+        }, 5000);
+      } else {
+        setIsTournament(false);
+        setTournamentCount(0);
+      }
     }
   };
 
@@ -181,13 +185,19 @@ const HostView = ({ roomCode, user, setView }) => {
     { id: 'neon-racer', name: 'Neon Racer', icon: Car, desc: 'Race and avoid the obstacles!' },
     { id: 'math-race', name: 'Math Race', icon: Calculator, desc: 'Solve problems to race!' },
     { id: 'shark-attack', name: 'Shark Attack', icon: SharkAttackIcon, desc: '1 vs All: Push or survive!' },
+    { id: 'boss-battle', name: 'Boss Battle', icon: Skull, desc: 'Final Team Fight!' },
     { id: 'book-squirm', name: 'Book Squirm', icon: BookOpen, desc: 'Avoid the paper by fitting through holes!' },
     { id: 'memory-match', name: 'Memory Match', icon: Brain, desc: 'Remember the sequence!' },
   ];
 
   if (status === 'playing') {
     return (
-      <div className="game-view">
+      <div className={`game-view theme-${gameType}`}>
+        {gameType === 'lava-jump' && <div className="epic-effect fire-overlay" />}
+        {gameType === 'shark-attack' && <div className="epic-effect water-overlay" />}
+        {gameType === 'boss-battle' && <div className="epic-effect void-overlay" />}
+        {gameType === 'neon-racer' && <div className="epic-effect neon-overlay" />}
+
         <div className="game-hud">
           <button className="neon-button secondary mini" onClick={backToLobby}>
             {isGameOver ? <Home size={18} /> : <LogOut size={18} />}
@@ -213,8 +223,9 @@ const HostView = ({ roomCode, user, setView }) => {
           {gameType === 'memory-match' && <MemoryMatch players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'math-race' && <MathRace players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'shark-attack' && <SharkAttack players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'boss-battle' && <BossBattle players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
 
-          {isGameOver && isTournament && tournamentCount >= 4 && (
+          {isGameOver && isTournament && tournamentCount >= 5 && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="tournament-celebration glass-panel center-all">
               <Trophy size={150} color="#ffd700" className="glow-icon" />
               <h1 className="neon-text">GRAND PRIX CHAMPION</h1>
@@ -442,6 +453,20 @@ const HostView = ({ roomCode, user, setView }) => {
         .prop-crown { position: absolute; top: -25px; font-size: 2.5rem; }
         .prop-hat { position: absolute; top: -25px; font-size: 2.5rem; }
         .prop-cool { position: absolute; bottom: 5px; font-size: 1.5rem; }
+
+        /* Epic Themes */
+        .epic-effect { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+        .fire-overlay { background: linear-gradient(0deg, rgba(255,b68,0,0.3) 0%, transparent 40%); box-shadow: inset 0 -50px 100px rgba(255,b68,0,0.5); animation: flicker 0.1s infinite; }
+        .water-overlay { background: rgba(0,b100,b255,0.1); }
+        .void-overlay { background: radial-gradient(circle, transparent 20%, rgba(70,0,150,0.4) 100%); mix-blend-mode: color-dodge; }
+        .neon-overlay { box-shadow: inset 0 0 100px rgba(0,b242,b255,0.2); }
+
+        @keyframes flicker { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
+
+        .theme-lava-jump { background: #300 !important; }
+        .theme-shark-attack { background: #001a33 !important; }
+        .theme-boss-battle { background: #0a001a !important; }
+
         .game-view { width: 100vw; height: 100vh; position: relative; overflow: hidden; background: #050505; }
         .game-hud { position: absolute; top: 20px; right: 20px; z-index: 9999; }
         .game-hud .neon-button { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); }

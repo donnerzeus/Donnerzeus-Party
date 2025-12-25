@@ -212,6 +212,15 @@ const ControllerView = ({ roomCode, user, setView }) => {
             return;
         }
 
+        if (type === 'boss-attack' || type === 'boss-heal') {
+            const actionId = Date.now() + Math.random();
+            update(ref(db, `rooms/${roomCode}/bossActions/${actionId}`), {
+                playerId: user.uid,
+                type: type === 'boss-attack' ? 'attack' : 'heal'
+            });
+            return;
+        }
+
         if (roomData?.status !== 'playing') return;
 
         if (roomData.gameType === 'fast-click') {
@@ -685,6 +694,34 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                     </div>
                                 )}
 
+                                {roomData.gameType === 'boss-battle' && (
+                                    <div className="boss-ui center-all">
+                                        <div className="boss-header">
+                                            <Skull size={60} color="#ff0044" />
+                                            <h2>VOID GUARDIAN</h2>
+                                        </div>
+                                        <div className="boss-actions-grid">
+                                            <motion.button
+                                                whileTap={{ scale: 0.9 }}
+                                                className="boss-btn attack"
+                                                onClick={() => handleAction('boss-attack')}
+                                            >
+                                                <Target size={40} />
+                                                <span>ATTACK</span>
+                                            </motion.button>
+                                            <motion.button
+                                                whileTap={{ scale: 0.9 }}
+                                                className="boss-btn heal"
+                                                onClick={() => handleAction('boss-heal')}
+                                            >
+                                                <Heart size={40} />
+                                                <span>HEAL TEAM</span>
+                                            </motion.button>
+                                        </div>
+                                        <p>TEAM ENERGY: {roomData.teamEnergy}%</p>
+                                    </div>
+                                )}
+
                                 {roomData.gameType === 'memory-match' && (
                                     <div className="memory-ui center-all">
                                         <h3>{roomData.gamePhase === 'showing' ? 'MEMORIZE!' : 'INPUT NOW!'}</h3>
@@ -833,8 +870,15 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .input-progress .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.2); }
                 .input-progress .dot.active { background: #00f2ff; box-shadow: 0 0 10px #00f2ff; }
 
-                .math-btn { font-size: 2rem !important; font-weight: 900; color: white; background: rgba(255,b255,255,0.1) !important; border: 2px solid var(--glass-border) !important; }
+                .math-btn { font-size: 2rem !important; font-weight: 900; color: white; background: rgba(255,255,255,0.1) !important; border: 2px solid var(--glass-border) !important; }
                 .math-btn:active { background: var(--accent-primary) !important; color: black; }
+
+                .boss-ui { width: 100%; gap: 30px; }
+                .boss-header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+                .boss-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
+                .boss-btn { height: 160px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; border: none; color: white; font-weight: 800; font-size: 1.2rem; }
+                .boss-btn.attack { background: linear-gradient(135deg, #ff4400, #ff0044); box-shadow: 0 10px 30px rgba(255,0,68,0.4); }
+                .boss-btn.heal { background: linear-gradient(135deg, #00ff44, #008822); box-shadow: 0 10px 30px rgba(0,255,68,0.3); }
             `}</style>
         </div>
     );
