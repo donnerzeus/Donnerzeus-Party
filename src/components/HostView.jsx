@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, onValue, update, set } from 'firebase/database';
-import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame, Heart, Crosshair, Mountain, Car, BookOpen, Brain, Calculator, Sparkles } from 'lucide-react';
+import { Users, LogOut, Play, Zap, MousePointer2, Palette, Bomb, Compass, ListChecks, Home, Trophy, BarChart3, Swords, Flame, Heart, Crosshair, Mountain, Car, BookOpen, Brain, Calculator, Sparkles, Ghost as SharkAttackIcon } from 'lucide-react';
 
 import FastClick from './games/FastClick';
 import ReactionTime from './games/ReactionTime';
@@ -21,6 +21,8 @@ import NeonRacer from './games/NeonRacer';
 import BookSquirm from './games/BookSquirm';
 import MemoryMatch from './games/MemoryMatch';
 import MathRace from './games/MathRace';
+import SharkAttack from './games/SharkAttack';
+import { sounds } from '../utils/sounds';
 
 const HostView = ({ roomCode, user, setView }) => {
   const [players, setPlayers] = useState([]);
@@ -78,9 +80,13 @@ const HostView = ({ roomCode, user, setView }) => {
       updates[`rooms/${roomCode}/players/${p.id}/score`] = 0;
       updates[`rooms/${roomCode}/players/${p.id}/lastClick`] = 0;
       updates[`rooms/${roomCode}/players/${p.id}/drawing`] = null;
-      updates[`rooms/${roomCode}/players/${p.id}/gyro`] = null;
+      updates[`rooms/${roomCode}/players/${p.id}/eliminated`] = false;
+      updates[`rooms/${roomCode}/players/${p.id}/posX`] = 50;
+      updates[`rooms/${roomCode}/players/${p.id}/posY`] = 50;
       updates[`rooms/${roomCode}/players/${p.id}/shakeCount`] = 0;
     });
+
+    sounds.playStart();
 
     updates[`rooms/${roomCode}/status`] = 'playing';
     updates[`rooms/${roomCode}/gameType`] = selectedGame;
@@ -124,9 +130,17 @@ const HostView = ({ roomCode, user, setView }) => {
 
   const handleGameOver = (winnerId) => {
     setIsGameOver(true);
-    if (winnerId) {
+    if (winnerId === 'fish_team') {
+      sounds.playWin();
+      players.filter(p => p.id !== gameType.sharkId).forEach(p => {
+        set(ref(db, `rooms/${roomCode}/globalScores/${p.id}`), (scores[p.id] || 0) + 10);
+      });
+    } else if (winnerId) {
+      sounds.playWin();
       const currentScore = scores[winnerId] || 0;
       set(ref(db, `rooms/${roomCode}/globalScores/${winnerId}`), currentScore + 10); // Reward 10 pts
+    } else {
+      sounds.playLoss();
     }
     update(ref(db, `rooms/${roomCode}`), { gamePhase: 'finished' });
 
@@ -166,6 +180,7 @@ const HostView = ({ roomCode, user, setView }) => {
     { id: 'social-climbers', name: 'Social Climbers', icon: Mountain, desc: 'CLIMB! But stop during the storm!' },
     { id: 'neon-racer', name: 'Neon Racer', icon: Car, desc: 'Race and avoid the obstacles!' },
     { id: 'math-race', name: 'Math Race', icon: Calculator, desc: 'Solve problems to race!' },
+    { id: 'shark-attack', name: 'Shark Attack', icon: SharkAttackIcon, desc: '1 vs All: Push or survive!' },
     { id: 'book-squirm', name: 'Book Squirm', icon: BookOpen, desc: 'Avoid the paper by fitting through holes!' },
     { id: 'memory-match', name: 'Memory Match', icon: Brain, desc: 'Remember the sequence!' },
   ];
@@ -197,6 +212,7 @@ const HostView = ({ roomCode, user, setView }) => {
           {gameType === 'book-squirm' && <BookSquirm players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'memory-match' && <MemoryMatch players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'math-race' && <MathRace players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'shark-attack' && <SharkAttack players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
 
           {isGameOver && isTournament && tournamentCount >= 4 && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="tournament-celebration glass-panel center-all">
@@ -204,6 +220,7 @@ const HostView = ({ roomCode, user, setView }) => {
               <h1 className="neon-text">GRAND PRIX CHAMPION</h1>
               {players.sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0)).slice(0, 1).map(p => (
                 <div key={p.id} className="champion-reveal center-all">
+                  <motion.div initial={{ y: 50 }} animate={{ y: 0 }} className="champ-crown">👑</motion.div>
                   <div className="champ-avatar" style={{ borderColor: p.color }}>
                     {p.avatar ? <img src={p.avatar} /> : p.name?.[0]}
                   </div>
@@ -270,6 +287,9 @@ const HostView = ({ roomCode, user, setView }) => {
                   >
                     <div className="avatar-body" style={{ borderColor: p.color }}>
                       {p.avatar ? <img src={p.avatar} /> : p.name?.[0].toUpperCase()}
+                      {p.prop === 'crown' && <div className="prop-crown">👑</div>}
+                      {p.prop === 'hat' && <div className="prop-hat">🎩</div>}
+                      {p.prop === 'cool' && <div className="prop-cool">😎</div>}
                     </div>
                     <div className="avatar-label" style={{ backgroundColor: p.color }}>{p.name}</div>
                   </motion.div>
@@ -417,8 +437,11 @@ const HostView = ({ roomCode, user, setView }) => {
         .champion-reveal { margin-top: 30px; gap: 20px; text-align: center; }
         .champ-avatar { width: 180px; height: 180px; border-radius: 40px; border: 8px solid; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 6rem; font-weight: 900; background: #111; }
         .champ-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* HUD & Transitions */
+        .champ-crown { font-size: 5rem; text-shadow: 0 0 30px #ffd700; margin-bottom: -40px; z-index: 100; }
+        
+        .prop-crown { position: absolute; top: -25px; font-size: 2.5rem; }
+        .prop-hat { position: absolute; top: -25px; font-size: 2.5rem; }
+        .prop-cool { position: absolute; bottom: 5px; font-size: 1.5rem; }
         .game-view { width: 100vw; height: 100vh; position: relative; overflow: hidden; background: #050505; }
         .game-hud { position: absolute; top: 20px; right: 20px; z-index: 9999; }
         .game-hud .neon-button { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); }

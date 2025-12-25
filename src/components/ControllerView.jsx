@@ -2,7 +2,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator, Ghost as Shark, Skull } from 'lucide-react';
+
+const HoldButton = ({ children, className, onAction }) => {
+    const timer = useRef(null);
+    const start = () => {
+        onAction();
+        timer.current = setInterval(onAction, 100);
+    };
+    const stop = () => {
+        if (timer.current) clearInterval(timer.current);
+        timer.current = null;
+    };
+    return (
+        <button
+            className={className}
+            onMouseDown={start} onMouseUp={stop} onMouseLeave={stop}
+            onTouchStart={start} onTouchEnd={stop}
+        >
+            {children}
+        </button>
+    );
+};
 
 const ControllerView = ({ roomCode, user, setView }) => {
     const [name, setName] = useState('');
@@ -186,6 +207,11 @@ const ControllerView = ({ roomCode, user, setView }) => {
             return;
         }
 
+        if (type === 'set-prop') {
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { prop: val });
+            return;
+        }
+
         if (roomData?.status !== 'playing') return;
 
         if (roomData.gameType === 'fast-click') {
@@ -220,6 +246,15 @@ const ControllerView = ({ roomCode, user, setView }) => {
             } else {
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             }
+        } else if (roomData.gameType === 'shark-attack') {
+            const step = roomData.sharkId === user.uid ? 8 : 4;
+            let nextX = playerData?.posX ?? 50;
+            let nextY = playerData?.posY ?? 50;
+            if (val === 0) nextY = Math.max(0, nextY - step);
+            if (val === 1) nextY = Math.min(100, nextY + step);
+            if (val === 2) nextX = Math.max(0, nextX - step);
+            if (val === 3) nextX = Math.min(100, nextX + step);
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { posX: nextX, posY: nextY });
         } else if (roomData.gameType === 'tug-of-war') {
             update(ref(db, `rooms/${roomCode}/players/${user.uid}`), { score: (playerData?.score || 0) + 1 });
         } else if (roomData.gameType === 'lava-jump') {
@@ -357,13 +392,13 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                 <h2>CONNECTED!</h2>
                                 <p>Move your avatar in the lobby!</p>
                                 <div className="arrow-controls lobby-arrows">
-                                    <button className="arrow-btn" onClick={() => handleAction('move', 0)}><ArrowUp /></button>
+                                    <HoldButton className="arrow-btn" onAction={() => handleAction('move', 0)}><ArrowUp /></HoldButton>
                                     <div className="mid-arrows">
-                                        <button className="arrow-btn" onClick={() => handleAction('move', 2)}><ArrowLeft /></button>
-                                        <div className="lobby-icon-center"><User /></div>
-                                        <button className="arrow-btn" onClick={() => handleAction('move', 3)}><ArrowRight /></button>
+                                        <HoldButton className="arrow-btn" onAction={() => handleAction('move', 2)}><ArrowLeft /></HoldButton>
+                                        <div className="lobby-icon-center">{playerData?.avatar ? <img src={playerData.avatar} style={{ width: '100%', height: '100%', borderRadius: '50%' }} /> : <User />}</div>
+                                        <HoldButton className="arrow-btn" onAction={() => handleAction('move', 3)}><ArrowRight /></HoldButton>
                                     </div>
-                                    <button className="arrow-btn" onClick={() => handleAction('move', 1)}><ArrowDown /></button>
+                                    <HoldButton className="arrow-btn" onAction={() => handleAction('move', 1)}><ArrowDown /></HoldButton>
                                 </div>
 
                                 <div className="lobby-actions-row">
@@ -375,6 +410,13 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                     <button className="neon-button mini react-btn" onClick={() => handleAction('reaction', '🔥')}>
                                         <Smile size={18} /> REACTION
                                     </button>
+                                </div>
+
+                                <div className="prop-chooser-row">
+                                    <button className="prop-btn" onClick={() => handleAction('set-prop', 'hat')}>🎩</button>
+                                    <button className="prop-btn" onClick={() => handleAction('set-prop', 'cool')}>😎</button>
+                                    <button className="prop-btn" onClick={() => handleAction('set-prop', 'crown')}>👑</button>
+                                    <button className="prop-btn" onClick={() => handleAction('set-prop', null)}>❌</button>
                                 </div>
                             </div>
                         ) : (
@@ -541,15 +583,15 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                     <div className="crab-ui center-all">
                                         <div className="role-tag">{playerData?.role?.toUpperCase()}</div>
                                         <div className="arrow-controls">
-                                            <button className="arrow-btn up" onClick={() => handleAction('move', 0)}><ArrowUp size={40} /></button>
+                                            <HoldButton className="arrow-btn up" onAction={() => handleAction('move', 0)}><ArrowUp size={40} /></HoldButton>
                                             <div className="mid-arrows">
-                                                <button className="arrow-btn left" onClick={() => handleAction('move', 2)}><ArrowLeft size={40} /></button>
+                                                <HoldButton className="arrow-btn left" onAction={() => handleAction('move', 2)}><ArrowLeft size={40} /></HoldButton>
                                                 {playerData?.role === 'fisher' ? (
                                                     <button className="smash-btn" onClick={() => handleAction('smash')}><Crosshair size={50} /></button>
                                                 ) : <div style={{ width: 80 }} />}
-                                                <button className="arrow-btn right" onClick={() => handleAction('move', 3)}><ArrowRight size={40} /></button>
+                                                <HoldButton className="arrow-btn right" onAction={() => handleAction('move', 3)}><ArrowRight size={40} /></HoldButton>
                                             </div>
-                                            <button className="arrow-btn down" onClick={() => handleAction('move', 1)}><ArrowDown size={40} /></button>
+                                            <HoldButton className="arrow-btn down" onAction={() => handleAction('move', 1)}><ArrowDown size={40} /></HoldButton>
                                         </div>
                                         <p>{playerData?.role === 'fisher' ? 'Move target and SMASH crabs!' : 'RUN AWAY from the fisherman!'}</p>
                                         {playerData?.status === 'dead' && (
@@ -581,12 +623,12 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                 {roomData.gameType === 'neon-racer' && (
                                     <div className="racer-ui center-all">
                                         <div className="racer-controls">
-                                            <button className="racer-btn side" onClick={() => handleAction('move', 2)}><ArrowLeft size={40} /></button>
-                                            <motion.button whileTap={{ scale: 0.9 }} className="racer-btn main" onClick={() => handleAction('gas')}>
+                                            <HoldButton className="racer-btn side" onAction={() => handleAction('move', 2)}><ArrowLeft size={40} /></HoldButton>
+                                            <HoldButton className="racer-btn main" onAction={() => handleAction('gas')}>
                                                 <Zap size={50} />
                                                 GAS!
-                                            </motion.button>
-                                            <button className="racer-btn side" onClick={() => handleAction('move', 3)}><ArrowRight size={40} /></button>
+                                            </HoldButton>
+                                            <HoldButton className="racer-btn side" onAction={() => handleAction('move', 3)}><ArrowRight size={40} /></HoldButton>
                                         </div>
                                         <div className="dist-track">
                                             <div className="fill" style={{ width: `${playerData?.distance || 0}%` }} />
@@ -597,14 +639,49 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                 {roomData.gameType === 'book-squirm' && (
                                     <div className="book-ui center-all">
                                         <div className="arrow-controls side-only">
-                                            <button className="arrow-btn" onClick={() => handleAction('move', 2)}><ArrowLeft size={50} /></button>
+                                            <HoldButton className="arrow-btn" onAction={() => handleAction('move', 2)}><ArrowLeft size={50} /></HoldButton>
                                             <BookOpen size={100} className="neon-text" />
-                                            <button className="arrow-btn" onClick={() => handleAction('move', 3)}><ArrowRight size={50} /></button>
+                                            <HoldButton className="arrow-btn" onAction={() => handleAction('move', 3)}><ArrowRight size={50} /></HoldButton>
                                         </div>
                                         <div className="pos-bar">
                                             <div className="indicator" style={{ left: `${playerData?.posX || 50}%` }} />
                                         </div>
                                         <p>STAY IN THE HOLE!</p>
+                                    </div>
+                                )}
+
+                                {roomData.gameType === 'math-race' && (
+                                    <div className="math-ui center-all">
+                                        <Calculator size={80} color="#00f2ff" />
+                                        <div className="simon-grid">
+                                            {(roomData.choices || []).map((choice, i) => (
+                                                <button
+                                                    key={choice}
+                                                    className="simon-pad math-btn"
+                                                    onClick={() => handleAction('answer', choice)}
+                                                >
+                                                    {choice}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p>CHOOSE CORRECT ANSWER!</p>
+                                    </div>
+                                )}
+
+                                {roomData.gameType === 'shark-attack' && (
+                                    <div className="shark-ui center-all">
+                                        <h2>{roomData.sharkId === user.uid ? 'YOU ARE THE SHARK!' : 'SURVIVE!'}</h2>
+                                        <p>{roomData.sharkId === user.uid ? 'Hunt the fish!' : 'Avoid the shark!'}</p>
+                                        <div className="arrow-controls">
+                                            <HoldButton className="arrow-btn" onAction={() => handleAction('move', 0)}><ArrowUp size={40} /></HoldButton>
+                                            <div className="mid-arrows">
+                                                <HoldButton className="arrow-btn" onAction={() => handleAction('move', 2)}><ArrowLeft size={40} /></HoldButton>
+                                                <div className="lobby-icon-center">{roomData.sharkId === user.uid ? <Shark size={40} /> : <ShieldCheck size={40} />}</div>
+                                                <HoldButton className="arrow-btn" onAction={() => handleAction('move', 3)}><ArrowRight size={40} /></HoldButton>
+                                            </div>
+                                            <HoldButton className="arrow-btn" onAction={() => handleAction('move', 1)}><ArrowDown size={40} /></HoldButton>
+                                        </div>
+                                        {playerData?.eliminated && <div className="dead-overlay center-all"><h2>ELIMINATED!</h2></div>}
                                     </div>
                                 )}
 
@@ -747,7 +824,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .lobby-icon-center { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; color: var(--accent-primary); background: rgba(0,242,255,0.1); border-radius: 50%; }
                 .lobby-actions-row { display: flex; gap: 10px; margin-top: 20px; }
                 .sensor-btn { background: #ffaa00; color: black; border: none; }
-                .react-btn { background: rgba(255,255,255,0.1); }
+                .react-btn { background: rgba(255,b255,255,0.1); }
+                .prop-chooser-row { display: flex; gap: 15px; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 15px; }
+                .prop-btn { font-size: 1.5rem; background: none; border: none; cursor: pointer; transition: transform 0.2s; }
+                .prop-btn:active { transform: scale(1.3); }
 
                 .input-progress { display: flex; gap: 10px; margin-top: 20px; }
                 .input-progress .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.2); }
