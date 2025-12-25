@@ -1,155 +1,264 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
-import { ref, onValue, update } from 'firebase/database';
-import { Palette, Trophy, Star } from 'lucide-react';
+import { ref, onValue, update, set } from 'firebase/database';
+import { Palette, Trophy, Sparkles, HelpCircle, PenTool, Search } from 'lucide-react';
+import { sounds } from '../../utils/sounds';
 
 const QuickDraw = ({ players, roomCode, onGameOver }) => {
-    const [word, setWord] = useState('EJDERHA');
-    const [phase, setPhase] = useState('drawing'); // drawing, exhibition, voting, results
+    const [gameState, setGameState] = useState('starting'); // starting, writing, drawing, showcase, reveal, ranking
     const [timeLeft, setTimeLeft] = useState(30);
-    const [drawings, setDrawings] = useState({});
+    const [currentDrawingIndex, setCurrentDrawingIndex] = useState(0);
+    const [showcasePhase, setShowcasePhase] = useState('fake_input'); // fake_input, voting, results
+    const [drawings, setDrawings] = useState([]);
+    const [prompts, setPrompts] = useState({});
+    const [fakePrompts, setFakePrompts] = useState({});
     const [votes, setVotes] = useState({});
-    const [winner, setWinner] = useState(null);
 
-    const words = ['KEDİ', 'UÇAK', 'PIZZA', 'AĞAÇ', 'ROBOT', 'GÜNEŞ', 'DONDURMA', 'ARABA', 'KORSAN', 'UZAYLI', 'KAYKAY'];
-
+    // 1. Initial Start
     useEffect(() => {
-        const randomWord = words[Math.floor(Math.random() * words.length)];
-        setWord(randomWord);
-        update(ref(db, `rooms/${roomCode}`), { gamePhase: 'drawing', currentWord: randomWord });
+        const timer = setTimeout(() => {
+            setGameState('writing');
+            update(ref(db, `rooms/${roomCode}`), { gamePhase: 'writing', drawings: null, prompts: null });
+            setTimeLeft(45);
+        }, 3000);
+        return () => clearTimeout(timer);
     }, []);
 
+    // 2. Main Game Loop / Timer
     useEffect(() => {
-        if (phase === 'drawing') {
-            if (timeLeft > 0) {
-                const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-                return () => clearTimeout(timer);
-            } else {
-                setPhase('voting');
+        if (timeLeft <= 0) {
+            handlePhaseEnd();
+            return;
+        }
+        const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+        return () => clearInterval(timer);
+    }, [timeLeft, gameState, showcasePhase]);
+
+    const handlePhaseEnd = () => {
+        if (gameState === 'writing') {
+            setGameState('drawing');
+            assignPrompts();
+            setTimeLeft(60);
+        } else if (gameState === 'drawing') {
+            startShowcase();
+        } else if (gameState === 'showcase') {
+            if (showcasePhase === 'fake_input') {
+                setShowcasePhase('voting');
+                setTimeLeft(20);
                 update(ref(db, `rooms/${roomCode}`), { gamePhase: 'voting' });
-                setTimeLeft(15); // 15 seconds to vote
-            }
-        } else if (phase === 'voting') {
-            if (timeLeft > 0) {
-                const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-                return () => clearTimeout(timer);
-            } else {
-                calculateWinner();
+            } else if (showcasePhase === 'voting') {
+                setShowcasePhase('results');
+                setTimeLeft(10);
+                update(ref(db, `rooms/${roomCode}`), { gamePhase: 'results' });
+            } else if (showcasePhase === 'results') {
+                if (currentDrawingIndex < drawings.length - 1) {
+                    setCurrentDrawingIndex(prev => prev + 1);
+                    setShowcasePhase('fake_input');
+                    setTimeLeft(30);
+                    update(ref(db, `rooms/${roomCode}`), {
+                        gamePhase: 'fake_input',
+                        currentArtist: drawings[currentDrawingIndex + 1].playerId
+                    });
+                } else {
+                    setGameState('ranking');
+                    setTimeout(() => onGameOver('team_victory'), 8000);
+                }
             }
         }
-    }, [timeLeft, phase]);
+    };
 
+    const assignPrompts = () => {
+        // Collect all prompts from DB
+        onValue(ref(db, `rooms/${roomCode}/prompts`), (snap) => {
+            const data = snap.val() || {};
+            const availablePrompts = Object.entries(data).map(([pid, text]) => ({ pid, text }));
+
+            // Randomly assign prompts to different players
+            const assignments = {};
+            players.forEach((p, i) => {
+                // Simplified: Give p[i] the prompt from p[i+1]
+                const targetIdx = (i + 1) % availablePrompts.length;
+                assignments[p.id] = availablePrompts[targetIdx].text;
+            });
+
+            update(ref(db, `rooms/${roomCode}`), {
+                gamePhase: 'drawing',
+                assignments,
+                drawings: null
+            });
+        }, { onlyOnce: true });
+    };
+
+    const startShowcase = () => {
+        // Collect all drawings
+        onValue(ref(db, `rooms/${roomCode}/players`), (snap) => {
+            const data = snap.val() || {};
+            const drawList = Object.entries(data)
+                .filter(([id, p]) => p.drawing)
+                .map(([id, p]) => ({ playerId: id, drawing: p.drawing, originalPrompt: p.assignedPrompt }));
+
+            setDrawings(drawList);
+            setGameState('showcase');
+            setShowcasePhase('fake_input');
+            setTimeLeft(30);
+            update(ref(db, `rooms/${roomCode}`), {
+                gamePhase: 'fake_input',
+                currentArtist: drawList[0].playerId
+            });
+        }, { onlyOnce: true });
+    };
+
+    // Listen for real-time updates of fakes and votes
     useEffect(() => {
-        const roomRef = ref(db, `rooms/${roomCode}`);
-        return onValue(roomRef, (snapshot) => {
+        return onValue(ref(db, `rooms/${roomCode}`), (snapshot) => {
             const data = snapshot.val();
-            if (data?.players) {
-                const newDrawings = {};
-                const newVotes = {};
-                Object.entries(data.players).forEach(([id, p]) => {
-                    if (p.drawing) newDrawings[id] = p.drawing;
-                    if (p.vote) {
-                        newVotes[p.vote] = (newVotes[p.vote] || 0) + 1;
-                    }
-                });
-                setDrawings(newDrawings);
-                setVotes(newVotes);
+            if (data) {
+                setFakePrompts(data.fakeInput || {});
+                setVotes(data.votes || {});
             }
         });
     }, [roomCode]);
 
-    const calculateWinner = () => {
-        let maxVotes = -1;
-        let winPlayer = null;
-        players.forEach(p => {
-            const vCount = votes[p.id] || 0;
-            if (vCount > maxVotes) {
-                maxVotes = vCount;
-                winPlayer = p;
-            }
-        });
-        setWinner(winPlayer);
-        setPhase('results');
-        if (onGameOver && winPlayer) onGameOver(winPlayer.id);
+    const renderShowcase = () => {
+        const currentItem = drawings[currentDrawingIndex];
+        if (!currentItem) return null;
+
+        const artist = players.find(p => p.id === currentItem.playerId);
+        const fakes = Object.values(fakePrompts);
+        const options = [...fakes, currentItem.originalPrompt].sort(); // Shuffle options
+
+        return (
+            <div className="showcase-area center-all">
+                <div className="drawing-frame glass-panel floating">
+                    <img src={currentItem.drawing} alt="The Masterpiece" />
+                    <div className="artist-tag" style={{ backgroundColor: artist?.color }}>
+                        Artist: {artist?.name}
+                    </div>
+                </div>
+
+                <div className="phase-content center-all">
+                    {showcasePhase === 'fake_input' && (
+                        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+                            <h2 className="glitch-text">FOOL THE OTHERS!</h2>
+                            <p>What could this drawing be? Write a convincing title!</p>
+                            <div className="waiting-list">
+                                {players.filter(p => p.id !== artist?.id).map(p => (
+                                    <div key={p.id} className={`status-tag ${fakePrompts[p.id] ? 'ready' : ''}`}>
+                                        {p.name} {fakePrompts[p.id] ? '✓' : '...'}
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {showcasePhase === 'voting' && (
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                            <h2 className="neon-text">FIND THE TRUTH</h2>
+                            <div className="options-grid">
+                                {options.map((opt, i) => (
+                                    <div key={i} className="option-card glass-panel">
+                                        {opt}
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {showcasePhase === 'results' && (
+                        <motion.div initial={{ y: 50 }} animate={{ y: 0 }} className="results-reveal">
+                            <h2 className="correct-answer">REAL PROMPT: <span className="neon-text">{currentItem.originalPrompt}</span></h2>
+                            <div className="stats-grid">
+                                {Object.entries(votes || {}).map(([voterId, targetPrompt]) => {
+                                    const voter = players.find(p => p.id === voterId);
+                                    const isCorrect = targetPrompt === currentItem.originalPrompt;
+                                    return (
+                                        <div key={voterId} className="vote-reveal">
+                                            <span style={{ color: voter?.color }}>{voter?.name}</span> guessed <span className={isCorrect ? 'text-success' : 'text-danger'}>{targetPrompt}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     return (
-        <div className="game-container center-all">
+        <div className="drawful-game center-all">
+            <div className="game-hud">
+                <div className="hud-item glass-panel timer accent">
+                    <PenTool size={24} />
+                    <span>{timeLeft}s</span>
+                </div>
+                <div className="hud-item glass-panel">
+                    <Sparkles size={24} />
+                    <span>{gameState.toUpperCase()}</span>
+                </div>
+            </div>
+
             <AnimatePresence mode="wait">
-                {phase === 'drawing' && (
-                    <motion.div key="drawing" className="center-all" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        <h1 className="timer-text neon-text">{timeLeft}</h1>
-                        <h1 className="draw-title">Draw: <span className="neon-text accent">{word}</span></h1>
-                        <p className="hint">Draw on your phone now!</p>
-                        <div className="progress-list">
+                {gameState === 'starting' && (
+                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0, scale: 2 }}>
+                        <Palette size={150} className="glow-icon" />
+                        <h1 className="title-mansion">DRAWING MANSION</h1>
+                        <p className="subtitle">THE TRUTH IS IN THE INK</p>
+                    </motion.div>
+                )}
+
+                {gameState === 'writing' && (
+                    <motion.div key="writing" className="center-all" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <HelpCircle size={100} color="var(--accent-secondary)" />
+                        <h2 className="neon-text">SUBMIT A PROMPT</h2>
+                        <p>Write something weird for others to draw!</p>
+                        <div className="waiting-grid">
                             {players.map(p => (
-                                <div key={p.id} className={`p-indicator ${drawings[p.id] ? 'ready' : ''}`}>
-                                    {p.name} {drawings[p.id] ? '✓' : '...'}
+                                <div key={p.id} className={`p-bubble ${prompts[p.id] ? 'ready' : ''}`} style={{ borderColor: p.color }}>
+                                    {p.name}
                                 </div>
                             ))}
                         </div>
                     </motion.div>
                 )}
 
-                {phase === 'voting' && (
-                    <motion.div key="voting" className="gallery-container center-all" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <h1 className="timer-text neon-text">{timeLeft}</h1>
-                        <h1>WHO DREW IT BEST?</h1>
-                        <p className="hint">Vote for your favorite on your phone!</p>
-                        <div className="drawings-grid">
-                            {players.map(player => (
-                                <motion.div key={player.id} className="drawing-card glass-panel" style={{ '--color': player.color }}>
-                                    <div className="canvas-frame">
-                                        {drawings[player.id] ? <img src={drawings[player.id]} alt="drawing" /> : <div className="no-draw">No Drawing</div>}
-                                    </div>
-                                    <div className="vote-count">
-                                        <Star size={20} className={votes[player.id] ? 'active' : ''} />
-                                        <span>{votes[player.id] || 0}</span>
-                                    </div>
-                                    <div className="player-name">{player.name}</div>
-                                </motion.div>
-                            ))}
+                {gameState === 'drawing' && (
+                    <motion.div key="drawing" className="center-all" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <PenTool size={100} color="var(--accent-primary)" />
+                        <h2 className="neon-text">TIME TO DRAW!</h2>
+                        <p>Check your phone and draw the assigned prompt!</p>
+                        <div className="progress-bar-glow">
+                            <div className="indicator" style={{ width: `${(timeLeft / 60) * 100}%` }} />
                         </div>
                     </motion.div>
                 )}
 
-                {phase === 'results' && (
-                    <motion.div key="results" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                        <Trophy size={120} color="#ffd700" className="trophy-glow" />
-                        <h2 className="neon-text">ARTIST OF THE ROUND</h2>
-                        <h1 className="winner-name" style={{ color: winner?.color }}>{winner?.name}</h1>
-                        <div className="result-img glass-panel">
-                            <img src={drawings[winner?.id]} alt="winner drawing" />
-                        </div>
-                        <p className="vote-total">Received {votes[winner?.id] || 0} votes!</p>
-                    </motion.div>
-                )}
+                {gameState === 'showcase' && renderShowcase()}
             </AnimatePresence>
 
             <style>{`
-                .game-container { width: 100%; height: 100%; }
-                .timer-text { font-size: 6rem; font-weight: 900; margin-bottom: 20px; }
-                .draw-title { font-size: 4rem; margin-bottom: 10px; }
-                .accent { color: var(--accent-secondary); }
-                .hint { color: var(--text-dim); font-size: 1.5rem; }
+                .drawful-game { width: 100%; height: 100%; overflow: hidden; background: radial-gradient(circle at center, #0f0a1f 0%, #05050a 100%); }
+                .subtitle { letter-spacing: 5px; opacity: 0.6; font-weight: 800; }
                 
-                .progress-list { display: flex; gap: 15px; margin-top: 40px; flex-wrap: wrap; justify-content: center; }
-                .p-indicator { padding: 10px 20px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-dim); }
-                .p-indicator.ready { border-color: var(--accent-primary); color: var(--accent-primary); box-shadow: 0 0 10px rgba(0,242,255,0.2); }
+                .waiting-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 40px; }
+                .p-bubble { padding: 15px 25px; border-radius: 50px; border: 2px solid; background: rgba(0,0,0,0.3); font-weight: 800; transition: all 0.3s; }
+                .p-bubble.ready { background: white; color: black; transform: scale(1.1); box-shadow: 0 0 20px rgba(255,255,255,0.2); }
 
-                .drawings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1200px; margin-top: 40px; }
-                .drawing-card { padding: 20px; display: flex; flex-direction: column; gap: 15px; align-items: center; position: relative; }
-                .canvas-frame { background: white; border-radius: 15px; width: 100%; height: 220px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-                .canvas-frame img { width: 100%; height: 100%; object-fit: contain; }
-                .no-draw { color: #ccc; }
-                .vote-count { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 1.5rem; color: #ffd700; }
-                .vote-count .active { filter: drop-shadow(0 0 5px #ffd700); }
-                
-                .winner-name { font-size: 6rem; margin: 20px 0; text-shadow: 0 0 30px currentColor; }
-                .result-img { padding: 20px; background: white; border-radius: 30px; max-width: 500px; width: 100%; margin: 30px 0; }
-                .result-img img { width: 100%; border-radius: 15px; }
-                .vote-total { font-size: 1.5rem; font-weight: 600; color: var(--text-dim); }
+                .drawing-frame { position: relative; width: 600px; height: 500px; background: white; border: 10px solid #1a1a1a; padding: 20px; border-radius: 20px; transform: rotate(-2deg); }
+                .drawing-frame img { width: 100%; height: 100%; object-fit: contain; }
+                .artist-tag { position: absolute; bottom: -20px; right: 20px; padding: 10px 20px; border-radius: 10px; color: white; font-weight: 900; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+
+                .waiting-list { display: flex; gap: 15px; margin-top: 30px; }
+                .status-tag { padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); color: var(--text-dim); }
+                .status-tag.ready { color: var(--accent-primary); border: 1px solid var(--accent-primary); }
+
+                .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; width: 800px; }
+                .option-card { padding: 25px; font-size: 1.4rem; font-weight: 700; text-align: center; color: white; border: 2px solid var(--glass-border); }
+
+                .correct-answer { margin-bottom: 30px; font-size: 3rem; }
+                .text-success { color: #00ff44; }
+                .text-danger { color: #ff0044; }
             `}</style>
         </div>
     );

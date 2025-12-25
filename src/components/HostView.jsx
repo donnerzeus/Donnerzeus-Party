@@ -23,7 +23,22 @@ import MemoryMatch from './games/MemoryMatch';
 import MathRace from './games/MathRace';
 import SharkAttack from './games/SharkAttack';
 import BossBattle from './games/BossBattle';
+import RhythmHero from './games/RhythmHero';
 import { sounds } from '../utils/sounds';
+
+const games = [
+  { id: 'fast-click', name: 'FAST CLICK', icon: <Zap />, description: 'Click as fast as possible!' },
+  { id: 'quick-draw', name: 'DRAWING MANSION', icon: <Palette />, description: 'Truth or Lie drawing game!' },
+  { id: 'rhythm-hero', name: 'NEON RHYTHM', icon: <Music />, description: 'Feel the beat!' },
+  { id: 'math-race', name: 'MATH RACE', icon: <Calculator />, description: 'Quick math!' },
+  { id: 'shark-attack', name: 'SHARK ATTACK', icon: <SharkAttackIcon />, description: 'Hunt or be hunted!' },
+  { id: 'lava-jump', name: 'LAVA JUMP', icon: <Flame />, description: 'Jump over lava!' },
+  { id: 'neon-racer', name: 'NEON RACER', icon: <Car />, description: 'High speed racing!' },
+  { id: 'book-squirm', name: 'BOOK SQUIRM', icon: <BookOpen />, description: 'Stay in the gap!' },
+  { id: 'crab-hunt', name: 'CRAB HUNT', icon: <Crosshair />, description: 'Catch the crabs!' },
+  { id: 'social-climbers', name: 'CLIMBERS', icon: <Mountain />, description: 'Climb the social ladder!' },
+  { id: 'boss-battle', name: 'BOSS BATTLE', icon: <Skull />, description: 'Final defiance!' },
+];
 
 const HostView = ({ roomCode, user, setView }) => {
   const [players, setPlayers] = useState([]);
@@ -202,25 +217,27 @@ const HostView = ({ roomCode, user, setView }) => {
 
   const joinUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${roomCode}`;
 
+  // Game registry with icons and descriptions
   const games = [
-    { id: 'fast-click', name: 'Fast Click', icon: MousePointer2, desc: 'Tap as fast as you can!' },
-    { id: 'reaction-time', name: 'Reaction', icon: Zap, desc: 'Tap when the screen turns green!' },
-    { id: 'simon-says', name: 'Simon Says', icon: ListChecks, desc: 'Repeat the memory pattern!' },
-    { id: 'quick-draw', name: 'Quick Draw', icon: Palette, desc: 'Draw the prompt on your phone!' },
-    { id: 'hot-potato', name: 'Hot Potato', icon: Bomb, desc: 'Pass the bomb before it explodes!' },
-    { id: 'steering', name: 'Steering', icon: Compass, desc: 'Work together to guide the orb!' },
-    { id: 'shake-it', name: 'Shake It!', icon: Zap, desc: 'Shake your phone like crazy!' },
-    { id: 'tug-of-war', name: 'Tug of War', icon: Swords, desc: 'Mash together to pull the rope!' },
-    { id: 'lava-jump', name: 'Lava Jump', icon: Flame, desc: 'Jump over fire obstacles!' },
-    { id: 'love-arrows', name: 'Love Arrows', icon: Heart, desc: 'Follow the arrows as fast as you can!' },
-    { id: 'crab-hunt', name: 'Crab Hunt', icon: Crosshair, desc: '1 vs All: Fisherman vs Crabs!' },
-    { id: 'social-climbers', name: 'Social Climbers', icon: Mountain, desc: 'CLIMB! But stop during the storm!' },
-    { id: 'neon-racer', name: 'Neon Racer', icon: Car, desc: 'Race and avoid the obstacles!' },
-    { id: 'math-race', name: 'Math Race', icon: Calculator, desc: 'Solve problems to race!' },
-    { id: 'shark-attack', name: 'Shark Attack', icon: SharkAttackIcon, desc: '1 vs All: Push or survive!' },
-    { id: 'boss-battle', name: 'Boss Battle', icon: Skull, desc: 'Final Team Fight!' },
-    { id: 'book-squirm', name: 'Book Squirm', icon: BookOpen, desc: 'Avoid the paper by fitting through holes!' },
-    { id: 'memory-match', name: 'Memory Match', icon: Brain, desc: 'Remember the sequence!' },
+    { id: 'fast-click', name: 'FAST CLICK', icon: Zap, desc: 'Click as fast as possible!' },
+    { id: 'reaction-time', name: 'REACTION', icon: Zap, desc: 'Tap when the screen turns green!' },
+    { id: 'simon-says', name: 'SIMON SAYS', icon: ListChecks, desc: 'Repeat the memory pattern!' },
+    { id: 'quick-draw', name: 'DRAWING MANSION', icon: Palette, desc: 'Drawful style! Draw your prompts.' },
+    { id: 'rhythm-hero', name: 'NEON RHYTHM', icon: Music, desc: 'Hit notes in Guitar Hero style!' },
+    { id: 'hot-potato', name: 'HOT POTATO', icon: Bomb, desc: 'Pass the bomb before it explodes!' },
+    { id: 'steering', name: 'STEERING', icon: Compass, desc: 'Work together to guide the orb!' },
+    { id: 'shake-it', name: 'SHAKE IT!', icon: Zap, desc: 'Shake your phone like crazy!' },
+    { id: 'tug-of-war', name: 'TUG OF WAR', icon: Swords, desc: 'Mash together to pull the rope!' },
+    { id: 'lava-jump', name: 'LAVA JUMP', icon: Flame, desc: 'Jump over fire obstacles!' },
+    { id: 'love-arrows', name: 'LOVE ARROWS', icon: Heart, desc: 'Follow the arrows as fast as you can!' },
+    { id: 'crab-hunt', name: 'CRAB HUNT', icon: Crosshair, desc: '1 vs All: Fisherman vs Crabs!' },
+    { id: 'social-climbers', name: 'CLIMBERS', icon: Mountain, desc: 'CLIMB! But stop during the storm!' },
+    { id: 'neon-racer', name: 'NEON RACER', icon: Car, desc: 'Race and avoid the obstacles!' },
+    { id: 'math-race', name: 'MATH RACE', icon: Calculator, desc: 'Solve problems to race!' },
+    { id: 'shark-attack', name: 'SHARK ATTACK', icon: SharkAttackIcon, desc: '1 vs All: Push or survive!' },
+    { id: 'boss-battle', name: 'BOSS BATTLE', icon: Skull, desc: 'Final Team Fight!' },
+    { id: 'book-squirm', name: 'BOOK SQUIRM', icon: BookOpen, desc: 'Fit through holes!' },
+    { id: 'memory-match', name: 'MEMORY MATCH', icon: Brain, desc: 'Remember the sequence!' },
   ];
 
   if (status === 'playing') {
@@ -257,6 +274,7 @@ const HostView = ({ roomCode, user, setView }) => {
           {gameType === 'math-race' && <MathRace players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'shark-attack' && <SharkAttack players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
           {gameType === 'boss-battle' && <BossBattle players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
+          {gameType === 'rhythm-hero' && <RhythmHero players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
 
           {isGameOver && isTournament && tournamentCount >= 5 && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="tournament-celebration glass-panel center-all">

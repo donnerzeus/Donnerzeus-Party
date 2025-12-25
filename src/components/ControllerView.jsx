@@ -36,6 +36,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
     const [loveSequence, setLoveSequence] = useState([]);
     const [loveStep, setLoveStep] = useState(0);
     const [memoryInput, setMemoryInput] = useState([]);
+    const [guessText, setGuessText] = useState('');
 
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -469,39 +470,125 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                     </div>
                                 )}
 
+                                {roomData.gameType === 'rhythm-hero' && (
+                                    <div className="rhythm-controls center-all">
+                                        <Music size={60} className="neon-text" />
+                                        <h3>HIT THE BEAT!</h3>
+                                        <div className="rhythm-grid">
+                                            {['#ff4444', '#44ff44', '#4444ff', '#ffff44'].map((color, i) => (
+                                                <motion.button
+                                                    key={i}
+                                                    whileTap={{ scale: 0.9, brightness: 1.5 }}
+                                                    className="rhythm-pad"
+                                                    style={{ backgroundColor: color }}
+                                                    onClick={() => {
+                                                        const hitId = Date.now() + Math.random();
+                                                        update(ref(db, `rooms/${roomCode}/rhythmHits/${hitId}`), {
+                                                            playerId: user.uid,
+                                                            type: i
+                                                        });
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 {roomData.gameType === 'quick-draw' && (
-                                    <div className="draw-interface glass-panel">
-                                        {roomData.gamePhase === 'drawing' ? (
-                                            <>
-                                                <h3>DRAW: {roomData.currentWord}</h3>
+                                    <div className="drawful-interface glass-panel">
+                                        {roomData.gamePhase === 'writing' && (
+                                            <div className="prompt-writing center-all">
+                                                <h3>WRITE A PROMPT</h3>
+                                                <p>Something funny or weird!</p>
+                                                <input
+                                                    className="controller-input"
+                                                    value={guessText}
+                                                    onChange={e => setGuessText(e.target.value.toUpperCase())}
+                                                    placeholder="E.g. A CAT ON MARS"
+                                                />
+                                                <button
+                                                    className="neon-button full"
+                                                    onClick={() => {
+                                                        update(ref(db, `rooms/${roomCode}/prompts`), { [user.uid]: guessText });
+                                                        setGuessText('');
+                                                    }}
+                                                    disabled={!guessText}
+                                                >
+                                                    SUBMIT
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {roomData.gamePhase === 'drawing' && (
+                                            <div className="drawing-phase center-all">
+                                                <h3>DRAW THIS:</h3>
+                                                <h2 className="neon-text">{roomData.assignments?.[user.uid] || '...'}</h2>
                                                 <div className="canvas-wrapper">
                                                     <canvas ref={canvasRef} width={300} height={400} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
                                                 </div>
                                                 <button className="neon-button secondary mini" onClick={() => canvasRef.current.getContext('2d').clearRect(0, 0, 300, 400)}>CLEAR</button>
-                                            </>
-                                        ) : roomData.gamePhase === 'voting' ? (
-                                            <div className="voting-ui center-all">
-                                                <h3>VOTE FOR BEST!</h3>
-                                                <div className="vote-list">
-                                                    {Object.entries(roomData.players)
-                                                        .filter(([id]) => id !== user.uid)
-                                                        .map(([id, p]) => (
-                                                            <button
-                                                                key={id}
-                                                                className={`neon-button mini ${playerData?.vote === id ? 'active' : ''}`}
-                                                                onClick={() => handleAction('quick-draw', id)}
-                                                                style={{ borderColor: p.color, width: '100%' }}
-                                                            >
-                                                                {p.name}
-                                                            </button>
-                                                        ))}
-                                                </div>
+                                                <p className="hint">The canvas is saved automatically!</p>
                                             </div>
-                                        ) : (
-                                            <div className="results-waiting center-all">
-                                                <Trophy size={64} className="neon-text" />
-                                                <h3>STAY TUNED!</h3>
-                                                <p>Checking the judges...</p>
+                                        )}
+
+                                        {roomData.gamePhase === 'fake_input' && (
+                                            <div className="fake-input center-all">
+                                                {roomData.currentArtist === user.uid ? (
+                                                    <div className="wait-artist center-all">
+                                                        <PenTool size={64} className="neon-text" />
+                                                        <h3>YOU ARE THE ARTIST</h3>
+                                                        <p>Wait for others to guess your masterpiece!</p>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <h3>FOOL THE OTHERS!</h3>
+                                                        <p>What is this drawing?</p>
+                                                        <input
+                                                            className="controller-input"
+                                                            value={guessText}
+                                                            onChange={e => setGuessText(e.target.value.toUpperCase())}
+                                                            placeholder="MY FAKE TITLE"
+                                                        />
+                                                        <button
+                                                            className="neon-button full"
+                                                            onClick={() => {
+                                                                update(ref(db, `rooms/${roomCode}/fakeInput`), { [user.uid]: guessText });
+                                                                setGuessText('');
+                                                            }}
+                                                            disabled={!guessText}
+                                                        >
+                                                            SEND FAKE
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {roomData.gamePhase === 'voting' && (
+                                            <div className="voting-phase center-all">
+                                                {roomData.currentArtist === user.uid ? (
+                                                    <h3>THEY ARE VOTING ON YOU!</h3>
+                                                ) : (
+                                                    <>
+                                                        <h3>PICK THE REAL ONE!</h3>
+                                                        <div className="vote-list">
+                                                            {(() => {
+                                                                const fakes = Object.values(roomData.fakeInput || {});
+                                                                // Correct prompt logic needs to be careful. Host knows the real one.
+                                                                // For now, we rely on what the host shows. 
+                                                                // In a real app, options would be synced.
+                                                                return [...fakes, "THE REAL ONE?"].map((opt, i) => (
+                                                                    <button
+                                                                        key={i}
+                                                                        className={`neon-button mini ${playerData?.vote === opt ? 'active' : ''}`}
+                                                                        onClick={() => update(ref(db, `rooms/${roomCode}/votes`), { [user.uid]: opt })}
+                                                                    >
+                                                                        {opt}
+                                                                    </button>
+                                                                ));
+                                                            })()}
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -886,6 +973,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .boss-energy-bar .label { font-size: 0.7rem; font-weight: 950; color: #00f2ff; letter-spacing: 1px; }
                 .boss-energy-bar .bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; }
                 .boss-energy-bar .bar-fill { height: 100%; transition: width 0.3s; }
+
+                .rhythm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; margin-top: 30px; }
+                .rhythm-pad { height: 140px; border-radius: 30px; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+                .rhythm-pad:active { filter: brightness(1.5); transform: scale(0.95); }
 
                 .shark-ui { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
                 .shark-ui h2 { color: #ff0044; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }

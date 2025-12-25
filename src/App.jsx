@@ -7,7 +7,7 @@ import HostView from './components/HostView';
 import ControllerView from './components/ControllerView';
 import { Gamepad2, Users, Monitor } from 'lucide-react';
 
-const VERSION = "v2.0.1";
+const VERSION = "v2.1.0";
 
 function App() {
   const [view, setView] = useState('loading'); // loading, landing, host, controller
@@ -82,6 +82,7 @@ function App() {
 
   return (
     <div className="app-container">
+      <div className="crt-overlay" />
       <div className="version-tag">{VERSION}</div>
       <AnimatePresence mode="wait">
         {!isAuthReady || view === 'loading' ? (
