@@ -36,24 +36,23 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
         }
     }, [gameState, roomCode]);
 
+    // Timer Interval - Runs once when playing starts
     useEffect(() => {
         if (gameState !== 'playing') return;
 
-        // Listen for player actions
-        const actionsRef = ref(db, `rooms/${roomCode}/bossActions`);
-        const unsubscribe = onValue(actionsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                Object.entries(data).forEach(([id, action]) => {
-                    handlePlayerAction(action.playerId, action.type);
-                    set(ref(db, `rooms/${roomCode}/bossActions/${id}`), null);
-                });
-            }
-        });
+        const timerInterval = setInterval(() => {
+            setTimeLeft(t => Math.max(0, t - 1));
+        }, 1000);
 
-        // Boss Attack Loop
+        return () => clearInterval(timerInterval);
+    }, [gameState]);
+
+    // Boss Attack Cycle - Dependencies: enraged state
+    useEffect(() => {
+        if (gameState !== 'playing') return;
+
+        const isEnraged = bossHp < 500;
         const attackInterval = setInterval(() => {
-            const isEnraged = bossHp < bossMaxHp / 2;
             const attackType = Math.random() > 0.6 ? 'slam' : 'laser';
             setBossState('attacking');
             sounds.playExplosion();
@@ -70,22 +69,28 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
                     return next;
                 });
             }, 1000);
-        }, bossHp < 500 ? 2500 : 4000);
+        }, isEnraged ? 2500 : 4000);
 
-        // Timer Loop
-        const timerInterval = setInterval(() => {
-            setTimeLeft(t => {
-                const next = Math.max(0, t - 1);
-                return next;
-            });
-        }, 1000);
+        return () => clearInterval(attackInterval);
+    }, [gameState, bossHp < 500]); // Only resets when enraged status changes
 
-        return () => {
-            unsubscribe();
-            clearInterval(attackInterval);
-            clearInterval(timerInterval);
-        };
-    }, [gameState, bossHp, roomCode]);
+    // Action Listener
+    useEffect(() => {
+        if (gameState !== 'playing') return;
+
+        const actionsRef = ref(db, `rooms/${roomCode}/bossActions`);
+        const unsubscribe = onValue(actionsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                Object.entries(data).forEach(([id, action]) => {
+                    handlePlayerAction(action.playerId, action.type);
+                    set(ref(db, `rooms/${roomCode}/bossActions/${id}`), null);
+                });
+            }
+        });
+
+        return () => unsubscribe();
+    }, [gameState, roomCode]);
 
     useEffect(() => {
         if (gameState === 'playing') {
@@ -200,8 +205,8 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
                                     key={p.id}
                                     className="player-vessel"
                                     animate={{
-                                        left: `${50 + 38 * Math.cos(i * (2 * Math.PI / players.length))}%`,
-                                        top: `${75 + 18 * Math.sin(i * (2 * Math.PI / players.length))}%`,
+                                        left: `${50 + 38 * Math.cos(i * (2 * Math.PI / Math.max(1, players.length)))}%`,
+                                        top: `${75 + 18 * Math.sin(i * (2 * Math.PI / Math.max(1, players.length)))}%`,
                                         scale: 1,
                                         opacity: 1
                                     }}

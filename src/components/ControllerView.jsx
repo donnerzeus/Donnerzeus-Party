@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
-import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator, Ghost as Shark, Skull, Music as MusicIcon, PenTool } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator, Ghost as Shark, Skull, Music as MusicIcon, PenTool, Target } from 'lucide-react';
 
 const HoldButton = ({ children, className, onAction }) => {
     const timer = useRef(null);
@@ -823,6 +823,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                                 <span>HEAL TEAM</span>
                                             </motion.button>
                                         </div>
+                                        <div className="boss-stats-controller glass-panel">
+                                            <div className="label">BOSS HP: {roomData.bossHp || 1000}</div>
+                                            <div className="bar-bg mini"><div className="bar-fill hp" style={{ width: `${((roomData.bossHp || 1000) / 1000) * 100}%` }} /></div>
+                                        </div>
                                         <div className="boss-energy-bar glass-panel">
                                             <div className="label">TEAM STAMINA: {roomData.teamEnergy || 100}%</div>
                                             <div className="bar-bg mini"><div className="bar-fill" style={{ width: `${roomData.teamEnergy || 100}%`, background: '#00f2ff' }} /></div>
@@ -969,10 +973,13 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .boss-btn { height: 160px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; border: none; color: white; font-weight: 800; font-size: 1.2rem; }
                 .boss-btn.attack { background: linear-gradient(135deg, #ff4400, #ff0044); box-shadow: 0 10px 30px rgba(255,0,68,0.4); }
                 .boss-btn.heal { background: linear-gradient(135deg, #00ff44, #008822); box-shadow: 0 10px 30px rgba(0,255,68,0.3); }
-                .boss-energy-bar { margin-top: 20px; width: 100%; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-                .boss-energy-bar .label { font-size: 0.7rem; font-weight: 950; color: #00f2ff; letter-spacing: 1px; }
-                .boss-energy-bar .bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; }
-                .boss-energy-bar .bar-fill { height: 100%; transition: width 0.3s; }
+                .boss-energy-bar, .boss-stats-controller { margin-top: 15px; width: 100%; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+                .boss-energy-bar .label, .boss-stats-controller .label { font-size: 0.7rem; font-weight: 950; letter-spacing: 1px; }
+                .boss-energy-bar .label { color: #00f2ff; }
+                .boss-stats-controller .label { color: #ff0044; }
+                .bar-bg.mini { width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; }
+                .bar-fill { height: 100%; transition: width 0.3s; }
+                .bar-fill.hp { background: #ff0044; box-shadow: 0 0 10px #ff0044; }
 
                 .rhythm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; margin-top: 30px; }
                 .rhythm-pad { height: 140px; border-radius: 30px; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
