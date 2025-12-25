@@ -6,6 +6,7 @@ import { Shield, Zap, Skull, Heart, Target, Trophy } from 'lucide-react';
 import { sounds } from '../../utils/sounds';
 
 const BossBattle = ({ players, roomCode, onGameOver }) => {
+    useEffect(() => { console.log("BOSS BATTLE MOUNTED", roomCode); }, []);
     const [gameState, setGameState] = useState('intro'); // intro, playing, victory, defeat
     const [bossHp, setBossHp] = useState(1000);
     const [bossMaxHp] = useState(1000);
@@ -135,14 +136,14 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
     const isEnraged = bossHp < 500;
 
     return (
-        <div className={`boss-battle center-all ${shake ? 'screenshake' : ''} ${isEnraged ? 'enraged' : ''}`}>
+        <div className={`boss-battle center-all ${shake ? 'screenshake' : ''} ${isEnraged ? 'enraged' : ''}`} style={{ zIndex: 100, background: isEnraged ? '#1a0000' : '#010005' }}>
             <div className="battle-hud">
                 <div className="team-stats">
                     <div className="stat-item energy">
                         <Zap color="#00f2ff" size={20} />
                         <div className="bar-bg mini"><motion.div className="bar-fill" animate={{ width: `${teamEnergy}%` }} /></div>
                     </div>
-                    <div className="team-label">TEAM STAMINA</div>
+                    <div className="team-label">TEAM STAMINA ({Math.round(teamEnergy)}%)</div>
                 </div>
 
                 <div className="boss-stats-center">
@@ -170,20 +171,21 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
                 {gameState === 'intro' ? (
                     <motion.div
                         key="intro"
-                        initial={{ scale: 0, opacity: 0 }}
+                        initial={{ scale: 0.5, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 2, opacity: 0 }}
+                        exit={{ scale: 1.5, opacity: 0 }}
                         className="boss-intro center-all absolute-center"
+                        style={{ background: 'radial-gradient(circle, rgba(70,0,150,0.5) 0%, transparent 70%)' }}
                     >
                         <div className="intro-glow" />
-                        <motion.div animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="boss-shadow">
-                            <Skull size={250} color="#ff0044" />
+                        <motion.div animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="boss-shadow">
+                            <Skull size={280} color="#ff0044" style={{ filter: 'drop-shadow(0 0 30px #ff0044)' }} />
                         </motion.div>
                         <h1 className="neon-text title giant">FINAL DEFIANCE</h1>
                         <p className="subtext">COOPERATE OR PERISH</p>
                     </motion.div>
                 ) : gameState === 'playing' ? (
-                    <div className="arena absolute-center">
+                    <div className="arena absolute-center" key="playing">
                         <motion.div
                             className={`boss-entity ${bossState} ${isEnraged ? 'enraged-mode' : ''}`}
                             animate={{
