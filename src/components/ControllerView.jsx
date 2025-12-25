@@ -46,10 +46,12 @@ const ControllerView = ({ roomCode, user, setView }) => {
 
         const cleanup = () => {
             // When player unmounts/leaves, clear their avatar and data
-            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
-                avatar: null,
-                online: false
-            });
+            if (user?.uid) {
+                update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
+                    avatar: null,
+                    online: false
+                });
+            }
         };
 
         const substribe = onValue(roomRef, (snapshot) => {

@@ -95,7 +95,7 @@ function App() {
               <motion.div animate={{ rotate: [0, 5, -5, 0], y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="logo-icon">
                 <Gamepad2 size={120} color="#00f2ff" style={{ filter: 'drop-shadow(0 0 20px #00f2ff)' }} />
               </motion.div>
-              <h1 className="neon-text main-title">DONNERZEUS PARTY</h1>
+              <h1 className="neon-text main-title">DONNERZEUS'S MANSION</h1>
               <p className="subtitle">Your phone is the controller. The screen is the playground.</p>
 
               <div className="action-cards">
