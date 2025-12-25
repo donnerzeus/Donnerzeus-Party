@@ -50,6 +50,7 @@ export const sounds = {
     },
     playClick: () => playTone(1200, 'sine', 0.05, 0.05),
     playExplosion: () => {
+        if (!audioCtx) initAudio();
         const duration = 0.5;
         const node = audioCtx.createBufferSource();
         const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
@@ -58,6 +59,7 @@ export const sounds = {
 
         node.buffer = buffer;
         const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
         node.connect(gain);
         gain.connect(audioCtx.destination);

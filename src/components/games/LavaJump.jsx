@@ -172,7 +172,7 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
                 .players-layer { position: absolute; top: 70%; left: 0; right: 0; display: flex; justify-content: center; gap: 30px; align-items: flex-end; transform: translateY(-100%); z-index: 5; }
                 .p-avatar-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
                 .name-tag { font-size: 1.2rem; font-weight: 800; background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 10px; border: 2px solid; color: white; }
-                .character-body { width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 0 20px rgba(255,b255,255,0.3); }
+                .character-body { width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
                 .p-initial { font-size: 2.5rem; font-weight: 900; color: white; }
                 
                 .lava-obstacle { position: absolute; top: 70%; height: 80px; transform: translateY(-100%); background: linear-gradient(0deg, #ff4400, #ffaa00); border-radius: 15px 15px 0 0; display: flex; align-items: center; justify-content: center; }

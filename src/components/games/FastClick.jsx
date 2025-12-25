@@ -52,8 +52,18 @@ const FastClick = ({ players, status, onGameOver }) => {
         <div className="leaderboard-screen">
           <div className="game-header">
             <h1 className="neon-text">
-              {phase === 'playing' ? `TAP! (${playTime}s)` : 'GAME OVER!'}
+              {phase === 'playing' ? `TAP AS FAST AS YOU CAN!` : 'FINAL STANDINGS'}
             </h1>
+            {phase === 'playing' && (
+              <div className="timer-bar-container">
+                <motion.div
+                  className="timer-bar"
+                  initial={{ width: '100%' }}
+                  animate={{ width: `${(playTime / 10) * 100}%` }}
+                  transition={{ duration: 1, ease: "linear" }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="leaderboard-grid">
@@ -66,10 +76,19 @@ const FastClick = ({ players, status, onGameOver }) => {
               >
                 <div className="rank">#{index + 1}</div>
                 <div className="player-info">
-                  <div className="avatar" style={{ background: player.color }}>
-                    {player.name[0].toUpperCase()}
+                  <div className="avatar" style={{ border: `3px solid ${player.color}` }}>
+                    {player.avatar ? <img src={player.avatar} alt="" /> : player.name[0].toUpperCase()}
                   </div>
-                  <span className="name">{player.name}</span>
+                  <div className="name-box">
+                    <span className="name">{player.name}</span>
+                    <div className="p-progress-bg">
+                      <motion.div
+                        className="p-progress-fill"
+                        animate={{ width: `${Math.min(100, (player.score || 0) / 0.5)}%` }}
+                        style={{ backgroundColor: player.color }}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="score-box">
                   <span className="score">{player.score || 0}</span>
@@ -77,8 +96,8 @@ const FastClick = ({ players, status, onGameOver }) => {
                 </div>
                 {index === 0 && phase === 'result' && (
                   <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
+                    initial={{ scale: 0, rotate: -45 }}
+                    animate={{ scale: 1, rotate: 0 }}
                     className="trophy-wrapper"
                   >
                     <Trophy className="trophy-icon-gold" />
@@ -94,6 +113,9 @@ const FastClick = ({ players, status, onGameOver }) => {
               animate={{ opacity: 1, y: 0 }}
               className="actions"
             >
+              <div className="winner-announcement">
+                <h2 style={{ color: sortedPlayers[0]?.color }}>{sortedPlayers[0]?.name} IS THE CHAMPION!</h2>
+              </div>
               <p className="hint">Waiting for host to select next game...</p>
             </motion.div>
           )}
@@ -123,93 +145,36 @@ const FastClick = ({ players, status, onGameOver }) => {
           flex-direction: column;
           gap: 40px;
         }
-        .game-header {
-          text-align: center;
-        }
-        .leaderboard-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-          max-width: 800px;
-          margin: 0 auto;
-          width: 100%;
-        }
+        .timer-bar-container { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; mt: 10px; overflow: hidden; }
+        .timer-bar { height: 100%; background: var(--accent-primary); box-shadow: 0 0 15px var(--accent-primary); }
+        
+        .p-progress-bg { width: 200px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; margin-top: 5px; }
+        .p-progress-fill { height: 100%; box-shadow: 0 0 10px currentColor; transition: width 0.2s; }
+        .name-box { display: flex; flex-direction: column; }
+
         .player-result-card {
           display: flex;
           align-items: center;
-          padding: 20px 30px;
+          padding: 15px 30px;
           gap: 20px;
           position: relative;
           overflow: hidden;
-          transition: all 0.5s ease;
-        }
-        .player-result-card.final {
-          transform: scale(1.05);
-        }
-        .player-result-card.winner {
-          border-color: #ffd700;
-          box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-        }
-        .rank {
-          font-size: 1.5rem;
-          font-weight: 800;
-          opacity: 0.5;
-          width: 50px;
-        }
-        .player-info {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          flex: 1;
+          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          border-radius: 20px;
         }
         .avatar {
-          width: 50px;
-          height: 50px;
-          border-radius: 50%;
+          width: 55px;
+          height: 55px;
+          border-radius: 15px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-weight: 800;
-          color: white;
-          box-shadow: 0 0 10px rgba(0,0,0,0.3);
+          background: #111;
+          overflow: hidden;
         }
-        .name {
-          font-size: 1.5rem;
-          font-weight: 600;
-        }
-        .score-box {
-          text-align: right;
-        }
-        .score {
-          font-size: 2.5rem;
-          font-weight: 800;
-          color: var(--accent-primary);
-          line-height: 1;
-          display: block;
-        }
-        .unit {
-          font-size: 0.7rem;
-          color: var(--text-dim);
-          font-weight: 800;
-        }
-        .trophy-wrapper {
-          position: absolute;
-          right: 20px;
-        }
-        .trophy-icon-gold {
-          color: #ffd700;
-          width: 40px;
-          height: 40px;
-          filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
-        }
-        .actions {
-          text-align: center;
-          margin-top: 20px;
-        }
-        .hint {
-          color: var(--text-dim);
-          font-style: italic;
-        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .winner-announcement h2 { font-size: 2.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
       `}</style>
     </div>
   );

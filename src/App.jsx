@@ -7,7 +7,7 @@ import HostView from './components/HostView';
 import ControllerView from './components/ControllerView';
 import { Gamepad2, Users, Monitor } from 'lucide-react';
 
-const VERSION = "v1.9.0";
+const VERSION = "v1.9.1";
 
 function App() {
   const [view, setView] = useState('loading'); // loading, landing, host, controller

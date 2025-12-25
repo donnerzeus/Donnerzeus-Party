@@ -31,7 +31,7 @@ const HostView = ({ roomCode, user, setView }) => {
   const [selectedGame, setSelectedGame] = useState('fast-click');
   const [gameType, setGameType] = useState('');
   const [isGameOver, setIsGameOver] = useState(false);
-  const [scores, setScores] = useState({}); // cross-game global scores
+  const [scores, setScores] = useState({});
   const [isTournament, setIsTournament] = useState(false);
   const [tournamentCount, setTournamentCount] = useState(0);
   const [activeReactions, setActiveReactions] = useState([]);
@@ -40,39 +40,51 @@ const HostView = ({ roomCode, user, setView }) => {
     const roomRef = ref(db, `rooms/${roomCode}`);
     const unsubscribe = onValue(roomRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
-        setStatus(data.status);
-        setGameType(data.gameType || '');
-        if (data.players) {
-          const playerList = Object.entries(data.players).map(([id, p]) => ({ id, ...p }));
-          setPlayers(playerList);
-        } else {
-          setPlayers([]);
-        }
-        if (data.gamePhase === 'finished') {
-          setIsGameOver(true);
-        }
-        if (data.globalScores) {
-          setScores(data.globalScores);
-        }
-        if (data.reactions) {
-          const list = Object.entries(data.reactions).map(([id, r]) => ({ id, ...r }));
-          setActiveReactions(list);
-          // Cleanup old reactions from DB after 3s
-          setTimeout(() => {
-            list.forEach(r => {
-              if (Date.now() - parseInt(r.id) > 2000) {
-                set(ref(db, `rooms/${roomCode}/reactions/${r.id}`), null);
-              }
-            });
-          }, 2500);
-        } else {
-          setActiveReactions([]);
-        }
+      if (!data) return;
+      setStatus(data.status);
+      setGameType(data.gameType || '');
+      if (data.players) {
+        const playerList = Object.entries(data.players).map(([id, p]) => ({ id, ...p }));
+        setPlayers(playerList);
+      } else {
+        setPlayers([]);
+      }
+      if (data.gamePhase === 'finished') {
+        setIsGameOver(true);
+      }
+      if (data.globalScores) {
+        setScores(data.globalScores);
+      }
+      if (data.reactions) {
+        const list = Object.entries(data.reactions).map(([id, r]) => ({ id, ...r }));
+        setActiveReactions(list);
+        setTimeout(() => {
+          list.forEach(r => {
+            if (Date.now() - parseInt(r.id) > 2000) {
+              set(ref(db, `rooms/${roomCode}/reactions/${r.id}`), null);
+            }
+          });
+        }, 2500);
+      } else {
+        setActiveReactions([]);
       }
     });
+
     return () => unsubscribe();
   }, [roomCode]);
+
+  const closeRoomCleanup = () => {
+    // Clear all chunky data
+    const updates = {};
+    players.forEach(p => {
+      updates[`rooms/${roomCode}/players/${p.id}/avatar`] = null;
+    });
+    updates[`rooms/${roomCode}/reactions`] = null;
+    updates[`rooms/${roomCode}/bossActions`] = null;
+    update(ref(db), updates).then(() => {
+      setView('landing');
+    });
+  };
 
   const startGame = () => {
     setIsGameOver(false);
@@ -256,7 +268,7 @@ const HostView = ({ roomCode, user, setView }) => {
             <h1 className="neon-text">{roomCode}</h1>
           </div>
           <div className="lobby-actions">
-            <button className="neon-button secondary" onClick={() => setView('landing')}>EXIT</button>
+            <button className="neon-button secondary" onClick={closeRoomCleanup}>EXIT</button>
           </div>
         </header>
 
@@ -408,7 +420,7 @@ const HostView = ({ roomCode, user, setView }) => {
         .avatar-label { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; color: black; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         /* Right Column - Controls & Players */
-        .lobby-controls { flex: 2; display: flex; flex-direction: column; gap: 15px; padding: 15px; min-height: 0; }
+        .lobby-controls { flex: 2; display: flex; flex-direction: column; gap: 15px; padding: 15px; min-height: 0; background: rgba(0,0,0,0.4); border-radius: 20px; }
         .mode-toggle { display: grid; grid-template-columns: 1fr 1fr; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 12px; }
         .mode-btn { padding: 8px; border: none; background: transparent; color: var(--text-dim); font-weight: 800; font-size: 0.7rem; border-radius: 9px; cursor: pointer; transition: all 0.2s; }
         .mode-btn.active { background: var(--accent-primary); color: black; }
@@ -456,10 +468,10 @@ const HostView = ({ roomCode, user, setView }) => {
 
         /* Epic Themes */
         .epic-effect { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-        .fire-overlay { background: linear-gradient(0deg, rgba(255,b68,0,0.3) 0%, transparent 40%); box-shadow: inset 0 -50px 100px rgba(255,b68,0,0.5); animation: flicker 0.1s infinite; }
-        .water-overlay { background: rgba(0,b100,b255,0.1); }
+        .fire-overlay { background: linear-gradient(0deg, rgba(255,68,0,0.3) 0%, transparent 40%); box-shadow: inset 0 -50px 100px rgba(255,68,0,0.5); animation: flicker 0.1s infinite; }
+        .water-overlay { background: rgba(0,100,255,0.1); }
         .void-overlay { background: radial-gradient(circle, transparent 20%, rgba(70,0,150,0.4) 100%); mix-blend-mode: color-dodge; }
-        .neon-overlay { box-shadow: inset 0 0 100px rgba(0,b242,b255,0.2); }
+        .neon-overlay { box-shadow: inset 0 0 100px rgba(0,242,255,0.2); }
 
         @keyframes flicker { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
 

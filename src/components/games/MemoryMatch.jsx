@@ -148,7 +148,7 @@ const MemoryMatch = ({ players, roomCode, onGameOver }) => {
                 
                 .sequence-display-big { height: 200px; display: flex; align-items: center; justify-content: center; margin-bottom: 50px; }
                 .seq-list { display: flex; gap: 20px; }
-                .seq-item { width: 80px; height: 80px; border-radius: 20px; border: 4px solid white; box-shadow: 0 0 20px rgba(255,b255,255,0.3); }
+                .seq-item { width: 80px; height: 80px; border-radius: 20px; border: 4px solid white; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
                 .blink { animation: blink 1s infinite alternate; }
                 @keyframes blink { from{opacity:0.3} to{opacity:1} }
 

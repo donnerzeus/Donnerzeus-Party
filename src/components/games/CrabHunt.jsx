@@ -185,7 +185,7 @@ const CrabHunt = ({ players, roomCode, onGameOver }) => {
                 @keyframes pulse { from{scale:0.8} to{scale:1.5; opacity:0} }
 
                 .crab-avatar { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 10; }
-                .p-bubble { width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 0 20px rgba(255,b255,255,0.3); }
+                .p-bubble { width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
                 .letter { font-size: 2rem; font-weight: 900; color: white; }
                 .p-name { font-size: 0.9rem; font-weight: 800; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 5px; }
 

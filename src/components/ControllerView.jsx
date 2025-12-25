@@ -43,7 +43,16 @@ const ControllerView = ({ roomCode, user, setView }) => {
     useEffect(() => {
         if (!roomCode || !user) return;
         const roomRef = ref(db, `rooms/${roomCode}`);
-        return onValue(roomRef, (snapshot) => {
+
+        const cleanup = () => {
+            // When player unmounts/leaves, clear their avatar and data
+            update(ref(db, `rooms/${roomCode}/players/${user.uid}`), {
+                avatar: null,
+                online: false
+            });
+        };
+
+        const substribe = onValue(roomRef, (snapshot) => {
             if (!snapshot.exists()) { setIsError(true); return; }
             const data = snapshot.val();
             setRoomData(data);
@@ -52,6 +61,11 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 setPlayerData(data.players[user.uid]);
             } else { setJoined(false); }
         });
+
+        return () => {
+            substribe();
+            cleanup();
+        };
     }, [roomCode, user]);
 
     // Gyroscope Effect Fix
@@ -772,7 +786,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .setup-form { width: 100%; display: flex; flex-direction: column; gap: 20px; }
                 
                 .avatar-picker-section { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px; }
-                .avatar-preview-box { width: 100px; height: 100px; border-radius: 30px; border: 3px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; overflow: hidden; transition: all 0.3s; background: rgba(255,b255,255,0.05); }
+                .avatar-preview-box { width: 100px; height: 100px; border-radius: 30px; border: 3px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; overflow: hidden; transition: all 0.3s; background: rgba(255,255,255,0.05); }
                 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
                 .upload-badge { position: absolute; bottom: 5px; right: 5px; background: var(--accent-primary); color: black; padding: 4px; border-radius: 8px; display: flex; align-items: center; justify-content: center; z-index: 2; }
                 .avatar-picker-section .hint { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); letter-spacing: 1px; }
@@ -861,7 +875,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .lobby-icon-center { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; color: var(--accent-primary); background: rgba(0,242,255,0.1); border-radius: 50%; }
                 .lobby-actions-row { display: flex; gap: 10px; margin-top: 20px; }
                 .sensor-btn { background: #ffaa00; color: black; border: none; }
-                .react-btn { background: rgba(255,b255,255,0.1); }
+                .react-btn { background: rgba(255,255,255,0.1); }
                 .prop-chooser-row { display: flex; gap: 15px; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 15px; }
                 .prop-btn { font-size: 1.5rem; background: none; border: none; cursor: pointer; transition: transform 0.2s; }
                 .prop-btn:active { transform: scale(1.3); }
