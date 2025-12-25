@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
 import { ref, update, onValue } from 'firebase/database';
 import { Flame, Activity, ShieldCheck, Skull } from 'lucide-react';
+import { sounds } from '../../utils/sounds';
 
 const LavaJump = ({ players, roomCode, onGameOver }) => {
     const [gameState, setGameState] = useState('countdown'); // countdown, playing, results
@@ -13,6 +14,7 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
 
     useEffect(() => {
         if (gameState === 'countdown') {
+            if (countdown === 3) sounds.playStart();
             if (countdown > 0) {
                 const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
                 return () => clearTimeout(timer);
@@ -88,35 +90,44 @@ const LavaJump = ({ players, roomCode, onGameOver }) => {
 
     useEffect(() => {
         if (gameState === 'results') {
-            const alive = players.filter(p => !deadPlayers.has(p.id));
+            // Mark dead players as eliminated in Firebase so HostView can filter them
+            deadPlayers.forEach(id => {
+                update(ref(db, `rooms/${roomCode}/players/${id}`), { eliminated: true });
+            });
+
             if (onGameOver) {
-                if (alive.length > 0) {
-                    alive.forEach(p => onGameOver(p.id));
-                } else {
-                    onGameOver(null); // No survivors
-                }
+                onGameOver('team_victory');
             }
         }
     }, [gameState]);
 
     return (
-        <div className="lava-game">
+        <div className="lava-game center-all">
+            <div className="game-hud">
+                <div className="hud-item glass-panel accent">
+                    <Activity size={28} />
+                    <span>{gameTime}s</span>
+                </div>
+                <div className="hud-item glass-panel">
+                    <Activity size={28} />
+                    <span>LIVE: {players.length - deadPlayers.size}</span>
+                </div>
+            </div>
+
             <AnimatePresence mode="wait">
                 {gameState === 'countdown' && (
-                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}>
-                        <h1 className="neon-text cd-title">WATCH OUT!</h1>
+                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0, scale: 2 }}>
+                        <Flame size={120} color="#ff4400" className="glow-icon" />
+                        <h1 className="neon-text title">LAVA JUMP</h1>
                         <h1 className="big-cd">{countdown}</h1>
-                        <p className="hint">JUMP to avoid the obstacles!</p>
+                        <div className="instruction-box glass-panel">
+                            <p>WATCH THE GROUND! JUMP TO AVOID THE INCOMING LAVA WAVES!</p>
+                        </div>
                     </motion.div>
                 )}
 
                 {(gameState === 'playing' || gameState === 'results') && (
                     <div className="lava-arena">
-                        <div className="lava-hud">
-                            <div className="timer-box glass-panel"><Activity size={24} /> <span>{gameTime}s</span></div>
-                            <div className="survivors-box glass-panel">LIVE: {players.length - deadPlayers.size}</div>
-                        </div>
-
                         <div className="stage-area">
                             <div className="platform-line" />
 

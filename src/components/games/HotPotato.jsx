@@ -3,30 +3,53 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
 import { ref, update, onValue } from 'firebase/database';
 import { Bomb } from 'lucide-react';
+import { sounds } from '../../utils/sounds';
 
 const HotPotato = ({ players, roomCode, onGameOver }) => {
+    const [gameState, setGameState] = useState('countdown');
+    const [countdown, setCountdown] = useState(3);
     const [bombHolder, setBombHolder] = useState(null);
     const [timeLeft, setTimeLeft] = useState(20);
     const [status, setStatus] = useState('active');
 
     useEffect(() => {
-        if (players.length > 0 && !bombHolder) {
-            const randomPlayer = players[Math.floor(Math.random() * players.length)];
-            setBombHolder(randomPlayer);
-            updateStore(randomPlayer.id);
+        if (gameState === 'countdown') {
+            if (countdown === 3) sounds.playStart();
+            if (countdown > 0) {
+                const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+                return () => clearTimeout(timer);
+            } else {
+                setGameState('playing');
+                update(ref(db, `rooms/${roomCode}`), { gamePhase: 'playing' });
+                if (players.length > 0 && !bombHolder) {
+                    const randomPlayer = players[Math.floor(Math.random() * players.length)];
+                    setBombHolder(randomPlayer);
+                    updateStore(randomPlayer.id);
+                }
+            }
         }
+    }, [countdown, gameState]);
+
+    useEffect(() => {
+        if (gameState !== 'playing') return;
 
         const timer = setInterval(() => {
             if (timeLeft > 0 && status === 'active') {
                 setTimeLeft(prev => prev - 1);
+                if (timeLeft < 5) sounds.playTick();
             } else if (timeLeft <= 0 && status === 'active') {
                 setStatus('exploded');
-                setTimeout(() => { if (onGameOver) onGameOver(); }, 3000);
+                sounds.playExplosion();
+                // Mark the holder as eliminated so handleGameOver knows who lost
+                if (bombHolder) {
+                    update(ref(db, `rooms/${roomCode}/players/${bombHolder.id}`), { eliminated: true });
+                }
+                setTimeout(() => { if (onGameOver) onGameOver('team_victory'); }, 3000);
             }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [players, bombHolder, timeLeft, status]);
+    }, [gameState, players, bombHolder, timeLeft, status]);
 
     const updateStore = (playerId) => {
         update(ref(db, `rooms/${roomCode}`), { bombHolderId: playerId, bombStatus: 'active' });
@@ -47,70 +70,94 @@ const HotPotato = ({ players, roomCode, onGameOver }) => {
         <div className="hot-potato center-all">
             <div className={`danger-glow ${timeLeft < 5 ? 'active' : ''}`} />
 
-            <div className="players-ring">
-                {players.map((p, i) => {
-                    const angle = (i * (360 / players.length)) * (Math.PI / 180);
-                    const radius = 250;
-                    const isHolder = p.id === bombHolder?.id;
-                    return (
-                        <motion.div
-                            key={p.id}
-                            className={`p-wrapper ${isHolder ? 'holding' : ''}`}
-                            animate={{
-                                x: Math.cos(angle) * radius,
-                                y: Math.sin(angle) * radius,
-                                scale: isHolder ? 1.2 : 1,
-                            }}
-                            transition={{ type: 'spring', damping: 10 }}
-                        >
-                            <div className="p-avatar" style={{ borderColor: p.color, backgroundColor: p.color + '22' }}>
-                                {p.avatar ? <img src={p.avatar} /> : p.name[0]}
-                                {isHolder && (
+            <div className="game-hud">
+                <div className={`hud-item glass-panel ${timeLeft < 5 ? 'accent' : ''}`}>
+                    <Bomb size={28} />
+                    <span>{timeLeft}s</span>
+                </div>
+            </div>
+
+            <AnimatePresence mode="wait">
+                {gameState === 'countdown' && (
+                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0, scale: 2 }}>
+                        <Bomb size={120} color="#ff0044" className="glow-icon" />
+                        <h1 className="neon-text title">HOT POTATO</h1>
+                        <h1 className="big-cd">{countdown}</h1>
+                        <div className="instruction-box glass-panel">
+                            <p>PASS THE BOMB! DON'T BE THE ONE HOLDING IT WHEN IT BLOWS!</p>
+                        </div>
+                    </motion.div>
+                )}
+
+                {gameState === 'playing' && (
+                    <>
+                        <div className="players-ring">
+                            {players.map((p, i) => {
+                                const angle = (i * (360 / players.length)) * (Math.PI / 180);
+                                const radius = 250;
+                                const isHolder = p.id === bombHolder?.id;
+                                return (
                                     <motion.div
-                                        className="panic-aura"
-                                        animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
-                                        transition={{ repeat: Infinity, duration: 0.5 }}
-                                    />
+                                        key={p.id}
+                                        className={`p-wrapper ${isHolder ? 'holding' : ''}`}
+                                        animate={{
+                                            x: Math.cos(angle) * radius,
+                                            y: Math.sin(angle) * radius,
+                                            scale: isHolder ? 1.2 : 1,
+                                        }}
+                                        transition={{ type: 'spring', damping: 10 }}
+                                    >
+                                        <div className="p-avatar" style={{ borderColor: p.color, backgroundColor: p.color + '22' }}>
+                                            {p.avatar ? <img src={p.avatar} /> : p.name[0]}
+                                            {isHolder && (
+                                                <motion.div
+                                                    className="panic-aura"
+                                                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
+                                                    transition={{ repeat: Infinity, duration: 0.5 }}
+                                                />
+                                            )}
+                                        </div>
+                                        <span className="p-label" style={{ backgroundColor: p.color }}>{p.name}</span>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="bomb-center">
+                            <motion.div
+                                animate={status === 'exploded' ? {
+                                    scale: [1, 50],
+                                    opacity: [1, 0],
+                                    filter: ['brightness(1)', 'brightness(10)']
+                                } : {
+                                    scale: timeLeft < 5 ? [1, 1.15, 1] : [1, 1.05, 1],
+                                    rotate: timeLeft < 5 ? [0, 10, -10, 0] : [0, 2, -2, 0]
+                                }}
+                                transition={{
+                                    duration: status === 'exploded' ? 0.4 : (timeLeft < 5 ? 0.15 : 0.8),
+                                    repeat: status === 'exploded' ? 0 : Infinity
+                                }}
+                                className={`bomb-core ${timeLeft < 5 ? 'near-miss' : ''}`}
+                            >
+                                <Bomb size={180} color={timeLeft < 5 ? '#ff0044' : '#ffffff'} className="bomb-svg" />
+                                {status !== 'exploded' && <div className="bomb-timer">{timeLeft}s</div>}
+                            </motion.div>
+
+                            <AnimatePresence>
+                                {status === 'exploded' && (
+                                    <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1.5, opacity: 1 }} className="explosion-overlay">
+                                        <h1 className="boom-text">BOOM!</h1>
+                                        <div className="victim-card glass-panel" style={{ '--color': bombHolder?.color }}>
+                                            <p>ELIMINATED</p>
+                                            <h2>{bombHolder?.name}</h2>
+                                        </div>
+                                    </motion.div>
                                 )}
-                            </div>
-                            <span className="p-label" style={{ backgroundColor: p.color }}>{p.name}</span>
-                        </motion.div>
-                    );
-                })}
-            </div>
-
-            <div className="bomb-center">
-                <motion.div
-                    animate={status === 'exploded' ? {
-                        scale: [1, 50],
-                        opacity: [1, 0],
-                        filter: ['brightness(1)', 'brightness(10)']
-                    } : {
-                        scale: timeLeft < 5 ? [1, 1.15, 1] : [1, 1.05, 1],
-                        rotate: timeLeft < 5 ? [0, 10, -10, 0] : [0, 2, -2, 0]
-                    }}
-                    transition={{
-                        duration: status === 'exploded' ? 0.4 : (timeLeft < 5 ? 0.15 : 0.8),
-                        repeat: status === 'exploded' ? 0 : Infinity
-                    }}
-                    className={`bomb-core ${timeLeft < 5 ? 'near-miss' : ''}`}
-                >
-                    <Bomb size={180} color={timeLeft < 5 ? '#ff0044' : '#ffffff'} className="bomb-svg" />
-                    {status !== 'exploded' && <div className="bomb-timer">{timeLeft}s</div>}
-                </motion.div>
-
-                <AnimatePresence>
-                    {status === 'exploded' && (
-                        <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1.5, opacity: 1 }} className="explosion-overlay">
-                            <h1 className="boom-text">BOOM!</h1>
-                            <div className="victim-card glass-panel" style={{ '--color': bombHolder?.color }}>
-                                <p>ELIMINATED</p>
-                                <h2>{bombHolder?.name}</h2>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                            </AnimatePresence>
+                        </div>
+                    </>
+                )}
+            </AnimatePresence>
 
             <style>{`
                 .hot-potato { width: 100%; height: 100%; position: relative; overflow: hidden; background: radial-gradient(circle, #222 0%, #000 100%); }

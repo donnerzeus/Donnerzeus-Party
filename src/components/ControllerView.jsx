@@ -775,7 +775,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                                 </button>
                                             ))}
                                         </div>
-                                        <p>CHOOSE CORRECT ANSER!</p>
+                                        <p>CHOOSE CORRECT ANSWER!</p>
                                     </div>
                                 )}
                             </div>

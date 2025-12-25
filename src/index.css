@@ -135,3 +135,77 @@ h3 {
     font-size: 1.8rem;
   }
 }
+/* UNIVERSAL GAME STYLES */
+.game-hud {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.hud-item {
+  padding: 15px 30px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-radius: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  pointer-events: auto;
+}
+
+.hud-item span {
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.hud-item.accent {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 15px rgba(0,242,255,0.2);
+}
+
+.big-cd {
+  font-size: 12rem;
+  font-weight: 900;
+  color: var(--accent-primary);
+  text-shadow: 0 0 50px rgba(0,242,255,0.5);
+  margin: 20px 0;
+}
+
+.game-title-container {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.instruction-box {
+  padding: 20px 40px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  text-align: center;
+  max-width: 600px;
+  margin-top: 40px;
+}
+
+.instruction-box p {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.glow-icon {
+  filter: drop-shadow(0 0 20px var(--accent-primary));
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}

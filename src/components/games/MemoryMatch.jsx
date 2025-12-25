@@ -73,8 +73,14 @@ const MemoryMatch = ({ players, roomCode, onGameOver }) => {
 
     useEffect(() => {
         if (gameState === 'finished') {
-            // Reward top scorers (this might need actual scoring in controller)
-            if (onGameOver) onGameOver(); // Global winner check based on points in players list
+            // Mark failed players as eliminated in Firebase for this round
+            Object.entries(playerResults).forEach(([id, status]) => {
+                if (status === 'fail') {
+                    update(ref(db, `rooms/${roomCode}/players/${id}`), { eliminated: true });
+                }
+            });
+
+            if (onGameOver) onGameOver('team_victory');
         }
     }, [gameState]);
 

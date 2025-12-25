@@ -17,7 +17,7 @@ const SimonSays = ({ players, roomCode, onGameOver }) => {
     const startNextRound = (currentSeq) => {
         if (round > 5) {
             setPhase('finished');
-            if (onGameOver) onGameOver();
+            if (onGameOver) onGameOver('team_victory');
             return;
         }
         const nextColor = Math.floor(Math.random() * 4);
@@ -57,7 +57,7 @@ const SimonSays = ({ players, roomCode, onGameOver }) => {
                     startNextRound(sequence);
                 } else {
                     setPhase('finished');
-                    if (onGameOver) onGameOver();
+                    if (onGameOver) onGameOver('team_victory');
                 }
             }, sequence.length * 1000 + 5000);
 

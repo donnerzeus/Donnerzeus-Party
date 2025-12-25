@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
 import { ref, update } from 'firebase/database';
 import { Ghost as Shark } from 'lucide-react';
-
+import { sounds } from '../../utils/sounds';
 const SharkAttack = ({ players, roomCode, onGameOver }) => {
     const [gameState, setGameState] = useState('countdown');
     const [countdown, setCountdown] = useState(3);
@@ -14,6 +14,7 @@ const SharkAttack = ({ players, roomCode, onGameOver }) => {
 
     useEffect(() => {
         if (gameState === 'countdown') {
+            if (countdown === 3) sounds.playStart();
             if (countdown > 0) {
                 const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
                 return () => clearTimeout(timer);
@@ -91,15 +92,23 @@ const SharkAttack = ({ players, roomCode, onGameOver }) => {
 
     return (
         <div className="shark-attack center-all">
-            <h2 className="timer-badge">{timeLeft}s</h2>
+            <div className="game-hud">
+                <div className="hud-item glass-panel accent">
+                    <Shark size={28} />
+                    <span>{timeLeft}s</span>
+                </div>
+            </div>
 
             <AnimatePresence mode="wait">
                 {gameState === 'countdown' && (
-                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}>
-                        <Shark size={120} color="#ff4444" className="heavy-glow" />
+                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0, scale: 2 }}>
+                        <Shark size={120} color="#ff4444" className="glow-icon" style={{ filter: 'drop-shadow(0 0 20px #ff4444)' }} />
                         <h1 className="neon-text title">SHARK ATTACK</h1>
                         <h1 className="big-cd">{countdown}</h1>
-                        <p className="instruction">Shark: PUSH EVERYONE OUT! | Fish: SURVIVE THE WATER!</p>
+                        <div className="instruction-box glass-panel">
+                            <p>SHARK: PUSH EVERYONE OUT!</p>
+                            <p>FISH: SURVIVE THE WATER!</p>
+                        </div>
                     </motion.div>
                 )}
 

@@ -143,20 +143,28 @@ const HostView = ({ roomCode, user, setView }) => {
 
   const handleGameOver = (winnerId) => {
     setIsGameOver(true);
-    if (winnerId === 'fish_team') {
+
+    if (winnerId === 'team_victory' || winnerId === 'fish_team') {
       sounds.playWin();
-      players.filter(p => p.id !== gameType.sharkId).forEach(p => {
-        set(ref(db, `rooms/${roomCode}/globalScores/${p.id}`), (scores[p.id] || 0) + 10);
+      const updates = {};
+      // In co-op or fish team win, reward all survivors/participants
+      players.forEach(p => {
+        if (!p.eliminated) {
+          updates[`rooms/${roomCode}/globalScores/${p.id}`] = (scores[p.id] || 0) + 10;
+        }
       });
+      update(ref(db), updates);
     } else if (winnerId) {
       sounds.playWin();
       const currentScore = scores[winnerId] || 0;
-      set(ref(db, `rooms/${roomCode}/globalScores/${winnerId}`), currentScore + 10); // Reward 10 pts
+      set(ref(db, `rooms/${roomCode}/globalScores/${winnerId}`), currentScore + 10);
     } else {
       sounds.playLoss();
     }
+
     update(ref(db, `rooms/${roomCode}`), { gamePhase: 'finished' });
 
+    // Standardization: After 5 seconds, either move to next game or return to lobby
     if (isTournament) {
       if (tournamentCount < 4) { // Rounds 1-4
         setTournamentCount(prev => prev + 1);
@@ -173,9 +181,18 @@ const HostView = ({ roomCode, user, setView }) => {
           startGame('boss-battle');
         }, 5000);
       } else {
-        setIsTournament(false);
-        setTournamentCount(0);
+        setTimeout(() => {
+          setIsTournament(false);
+          setTournamentCount(0);
+          backToLobby();
+        }, 5000);
       }
+    } else {
+      // For single games, wait 5 seconds then go back to lobby automatically
+      // OR let user click? Let's make it automatic to avoid dead ends.
+      setTimeout(() => {
+        backToLobby();
+      }, 5000);
     }
   };
 

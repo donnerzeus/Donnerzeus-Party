@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
 import { ref, update, onValue } from 'firebase/database';
 import { Calculator, Trophy, Zap } from 'lucide-react';
+import { sounds } from '../../utils/sounds';
 
 const MathRace = ({ players, roomCode, onGameOver }) => {
     const [gameState, setGameState] = useState('countdown');
@@ -12,6 +13,7 @@ const MathRace = ({ players, roomCode, onGameOver }) => {
 
     useEffect(() => {
         if (gameState === 'countdown') {
+            if (countdown === 3) sounds.playStart();
             if (countdown > 0) {
                 const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
                 return () => clearTimeout(timer);
@@ -88,13 +90,22 @@ const MathRace = ({ players, roomCode, onGameOver }) => {
 
     return (
         <div className="math-race center-all">
+            <div className="game-hud">
+                <div className="hud-item glass-panel accent">
+                    <Calculator size={28} />
+                    <span>ROUND {round}</span>
+                </div>
+            </div>
+
             <AnimatePresence mode="wait">
                 {gameState === 'countdown' && (
-                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}>
-                        <Calculator size={100} color="#00f2ff" />
-                        <h1 className="neon-text">MATH RACE</h1>
+                    <motion.div key="cd" className="center-all" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0, scale: 2 }}>
+                        <Calculator size={120} color="#00f2ff" className="glow-icon" />
+                        <h1 className="neon-text title">MATH RACE</h1>
                         <h1 className="big-cd">{countdown}</h1>
-                        <p className="hint">Solve problems to move forward!</p>
+                        <div className="instruction-box glass-panel">
+                            <p>SOLVE MATH PROBLEMS TO GAIN SPEED AND REACH THE FINISH LINE!</p>
+                        </div>
                     </motion.div>
                 )}
 
@@ -105,6 +116,7 @@ const MathRace = ({ players, roomCode, onGameOver }) => {
                         </div>
 
                         <div className="race-track">
+// ... (rest of the UI)
                             {players.map(p => (
                                 <motion.div
                                     key={p.id}
