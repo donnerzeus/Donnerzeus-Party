@@ -736,7 +736,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                                 <span>HEAL TEAM</span>
                                             </motion.button>
                                         </div>
-                                        <p>TEAM ENERGY: {roomData.teamEnergy}%</p>
+                                        <div className="boss-energy-bar glass-panel">
+                                            <div className="label">TEAM STAMINA: {roomData.teamEnergy || 100}%</div>
+                                            <div className="bar-bg mini"><div className="bar-fill" style={{ width: `${roomData.teamEnergy || 100}%`, background: '#00f2ff' }} /></div>
+                                        </div>
                                     </div>
                                 )}
 
@@ -758,24 +761,6 @@ const ControllerView = ({ roomCode, user, setView }) => {
                                             {memoryInput.map((_, i) => <div key={i} className="dot active" />)}
                                             {Array(Math.max(0, (roomData.currentSequence?.length || 0) - memoryInput.length)).fill(0).map((_, i) => <div key={i} className="dot" />)}
                                         </div>
-                                    </div>
-                                )}
-
-                                {roomData.gameType === 'math-race' && (
-                                    <div className="math-ui center-all">
-                                        <Calculator size={80} color="#00f2ff" />
-                                        <div className="simon-grid">
-                                            {(roomData.choices || []).map((choice, i) => (
-                                                <button
-                                                    key={i}
-                                                    className="simon-pad math-btn"
-                                                    onClick={() => handleAction('answer', choice)}
-                                                >
-                                                    {choice}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <p>CHOOSE CORRECT ANSWER!</p>
                                     </div>
                                 )}
                             </div>
@@ -897,6 +882,10 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .boss-btn { height: 160px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; border: none; color: white; font-weight: 800; font-size: 1.2rem; }
                 .boss-btn.attack { background: linear-gradient(135deg, #ff4400, #ff0044); box-shadow: 0 10px 30px rgba(255,0,68,0.4); }
                 .boss-btn.heal { background: linear-gradient(135deg, #00ff44, #008822); box-shadow: 0 10px 30px rgba(0,255,68,0.3); }
+                .boss-energy-bar { margin-top: 20px; width: 100%; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+                .boss-energy-bar .label { font-size: 0.7rem; font-weight: 950; color: #00f2ff; letter-spacing: 1px; }
+                .boss-energy-bar .bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; }
+                .boss-energy-bar .bar-fill { height: 100%; transition: width 0.3s; }
 
                 .shark-ui { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
                 .shark-ui h2 { color: #ff0044; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
