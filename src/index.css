@@ -124,6 +124,7 @@ body::after {
   justify-content: center;
   gap: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  touch-action: none;
 }
 
 .neon-button:hover {

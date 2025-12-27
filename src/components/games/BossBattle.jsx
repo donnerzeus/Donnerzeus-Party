@@ -6,7 +6,8 @@ import { Shield, Zap, Skull, Heart, Target, Trophy } from 'lucide-react';
 import { sounds } from '../../utils/sounds';
 
 const BossBattle = ({ players, roomCode, onGameOver }) => {
-    useEffect(() => { console.log("BOSS BATTLE MOUNTED", roomCode); }, []);
+    useEffect(() => { console.log("BOSS BATTLE MOUNTED", roomCode); }, [roomCode]);
+
     const [gameState, setGameState] = useState('intro'); // intro, playing, victory, defeat
     const [bossHp, setBossHp] = useState(1000);
     const [bossMaxHp] = useState(1000);
@@ -19,36 +20,38 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
     // Initial state sync to Firebase
     useEffect(() => {
         if (gameState === 'intro') {
+            console.log("BOSS BATTLE INTRO START");
             sounds.playStart();
-            // Ensure Firebase has initial boss state for Controller
-            update(ref(db, `rooms/${roomCode}`), {
+
+            // Initial sync
+            const initialUpdates = {
                 bossHp: 1000,
                 teamEnergy: 100,
                 gamePhase: 'starting'
-            });
+            };
+            update(ref(db, `rooms/${roomCode}`), initialUpdates).catch(err => console.error("Firebase Sync Error:", err));
 
             const timer = setTimeout(() => {
                 setGameState('playing');
-                update(ref(db, `rooms/${roomCode}`), {
-                    gamePhase: 'playing'
-                });
+                update(ref(db, `rooms/${roomCode}`), { gamePhase: 'playing' });
             }, 3000);
             return () => clearTimeout(timer);
         }
     }, [gameState, roomCode]);
 
-    // Timer Interval - Runs once when playing starts
+    // Timer Interval
     useEffect(() => {
         if (gameState !== 'playing') return;
-
         const timerInterval = setInterval(() => {
-            setTimeLeft(t => Math.max(0, t - 1));
+            setTimeLeft(t => {
+                const next = Math.max(0, t - 1);
+                return next;
+            });
         }, 1000);
-
         return () => clearInterval(timerInterval);
     }, [gameState]);
 
-    // Boss Attack Cycle - Dependencies: enraged state
+    // Boss Attack Cycle
     useEffect(() => {
         if (gameState !== 'playing') return;
 
@@ -62,18 +65,21 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
             setTimeout(() => setShake(false), 500);
 
             setTimeout(() => {
+                if (gameState !== 'playing') return;
                 setBossState('idle');
                 const damage = (attackType === 'slam' ? 10 : 15) * (isEnraged ? 1.5 : 1);
+
                 setTeamEnergy(prev => {
                     const next = Math.max(0, prev - damage);
-                    update(ref(db, `rooms/${roomCode}`), { teamEnergy: next });
+                    // IMPORTANT: Firebase update OUTSIDE of state updater
+                    setTimeout(() => update(ref(db, `rooms/${roomCode}`), { teamEnergy: next }), 0);
                     return next;
                 });
             }, 1000);
         }, isEnraged ? 2500 : 4000);
 
         return () => clearInterval(attackInterval);
-    }, [gameState, bossHp < 500]); // Only resets when enraged status changes
+    }, [gameState, bossHp < 500, roomCode]);
 
     // Action Listener
     useEffect(() => {
@@ -93,6 +99,7 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
         return () => unsubscribe();
     }, [gameState, roomCode]);
 
+    // Win/Loss Condition
     useEffect(() => {
         if (gameState === 'playing') {
             if (bossHp <= 0) {
@@ -111,7 +118,7 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
         if (type === 'attack') {
             setBossHp(prev => {
                 const next = Math.max(0, prev - 15);
-                update(ref(db, `rooms/${roomCode}`), { bossHp: next });
+                setTimeout(() => update(ref(db, `rooms/${roomCode}`), { bossHp: next }), 0);
                 return next;
             });
             setBossState('hurt');
@@ -120,7 +127,7 @@ const BossBattle = ({ players, roomCode, onGameOver }) => {
         } else if (type === 'heal') {
             setTeamEnergy(prev => {
                 const next = Math.min(100, prev + 10);
-                update(ref(db, `rooms/${roomCode}`), { teamEnergy: next });
+                setTimeout(() => update(ref(db, `rooms/${roomCode}`), { teamEnergy: next }), 0);
                 return next;
             });
             addVfx(50, 80, 'heal');

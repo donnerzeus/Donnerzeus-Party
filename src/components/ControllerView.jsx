@@ -4,21 +4,26 @@ import { db } from '../firebase';
 import { ref, update, onValue } from 'firebase/database';
 import { User, CheckCircle, AlertCircle, Zap, Palette, Bomb, Compass, ListChecks, ShieldCheck, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Crosshair, Heart, Car, Mountain, BookOpen, Brain, Camera, Upload, Smile, Calculator, Ghost as Shark, Skull, Music as MusicIcon, PenTool, Target } from 'lucide-react';
 
-const HoldButton = ({ children, className, onAction }) => {
+const HoldButton = ({ children, className, onAction, style }) => {
     const timer = useRef(null);
-    const start = () => {
+    const start = (e) => {
+        if (e.cancelable) e.preventDefault();
         onAction();
+        if (timer.current) clearInterval(timer.current);
         timer.current = setInterval(onAction, 100);
     };
-    const stop = () => {
+    const stop = (e) => {
+        if (e && e.cancelable) e.preventDefault();
         if (timer.current) clearInterval(timer.current);
         timer.current = null;
     };
     return (
         <button
             className={className}
+            style={style}
             onMouseDown={start} onMouseUp={stop} onMouseLeave={stop}
             onTouchStart={start} onTouchEnd={stop}
+            onContextMenu={(e) => e.preventDefault()}
         >
             {children}
         </button>
@@ -879,7 +884,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .success-icon { filter: drop-shadow(0 0 10px #00ff44); }
                 .sensor-btn { margin-top: 20px; font-size: 0.8rem; padding: 10px 20px; }
 
-                .action-circle { width: 280px; height: 280px; border-radius: 50%; border: none; font-size: 3rem; font-weight: 900; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
+                .action-circle { width: 280px; height: 280px; border-radius: 50%; border: none; font-size: 3rem; font-weight: 900; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 15px 40px rgba(0,0,0,0.5); touch-action: none; }
                 .fast-click { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); }
                 .fast-click .sub { font-size: 1.5rem; opacity: 0.7; }
                 
@@ -888,7 +893,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 @keyframes glowPulse { 0% { box-shadow: 0 0 0 rgba(0,255,0,0); } 50% { box-shadow: 0 0 30px rgba(0,255,0,0.6); } 100% { box-shadow: 0 0 0 rgba(0,255,0,0); } }
 
                 .simon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 300px; height: 300px; }
-                .simon-pad { border-radius: 20px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+                .simon-pad { border-radius: 20px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); touch-action: none; }
 
                 .draw-interface { padding: 15px; background: white; color: black; border-radius: 30px; width: 100%; max-width: 320px; min-height: 450px; }
                 .voting-ui { width: 100%; gap: 10px; }
@@ -921,7 +926,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
 
                 .arrow-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 20px 0; }
                 .mid-arrows { display: flex; gap: 10px; align-items: center; }
-                .arrow-btn { width: 80px; height: 80px; border-radius: 20px; border: 2px solid var(--glass-border); background: rgba(255,255,255,0.1); color: white; display: flex; align-items: center; justify-content: center; }
+                .arrow-btn { width: 80px; height: 80px; border-radius: 20px; border: 2px solid var(--glass-border); background: rgba(255,255,255,0.1); color: white; display: flex; align-items: center; justify-content: center; touch-action: none; }
                 .arrow-btn:active { background: var(--accent-primary); color: black; }
                 
                 .sequence-display { display: flex; gap: 15px; margin-bottom: 20px; }
@@ -941,7 +946,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
 
                 .racer-ui { width: 100%; gap: 30px; }
                 .racer-controls { display: flex; align-items: center; gap: 20px; }
-                .racer-btn { border-radius: 20px; border: 2px solid var(--glass-border); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); }
+                .racer-btn { border-radius: 20px; border: 2px solid var(--glass-border); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); touch-action: none; }
                 .racer-btn.side { width: 80px; height: 120px; }
                 .racer-btn.main { width: 150px; height: 150px; background: linear-gradient(135deg, #00f2ff, #7000ff); font-weight: 900; font-size: 1.5rem; gap: 10px; }
                 .dist-track { width: 80%; height: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; overflow: hidden; }
@@ -970,7 +975,7 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .boss-ui { width: 100%; gap: 30px; }
                 .boss-header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
                 .boss-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
-                .boss-btn { height: 160px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; border: none; color: white; font-weight: 800; font-size: 1.2rem; }
+                .boss-btn { height: 160px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; border: none; color: white; font-weight: 800; font-size: 1.2rem; touch-action: none; }
                 .boss-btn.attack { background: linear-gradient(135deg, #ff4400, #ff0044); box-shadow: 0 10px 30px rgba(255,0,68,0.4); }
                 .boss-btn.heal { background: linear-gradient(135deg, #00ff44, #008822); box-shadow: 0 10px 30px rgba(0,255,68,0.3); }
                 .boss-energy-bar, .boss-stats-controller { margin-top: 15px; width: 100%; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -982,12 +987,55 @@ const ControllerView = ({ roomCode, user, setView }) => {
                 .bar-fill.hp { background: #ff0044; box-shadow: 0 0 10px #ff0044; }
 
                 .rhythm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; margin-top: 30px; }
-                .rhythm-pad { height: 140px; border-radius: 30px; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+                .rhythm-pad { height: 140px; border-radius: 30px; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3); touch-action: none; }
                 .rhythm-pad:active { filter: brightness(1.5); transform: scale(0.95); }
 
-                .shark-ui { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+                .shark-ui { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px; }
                 .shark-ui h2 { color: #ff0044; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
                 .shark-ui p { font-size: 0.9rem; opacity: 0.8; margin-bottom: 20px; }
+                .shark-ui .lobby-icon-center { width: 80px; height: 80px; margin: 10px 0; }
+
+                /* LANDSCAPE OPTIMIZATIONS */
+                @media (orientation: landscape) {
+                    .controller-view { padding: 10px; overflow-y: auto; }
+                    .main-controller { display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 100%; }
+                    .game-interface { flex-direction: row; gap: 40px; padding: 10px; }
+                    
+                    .lobby-info { flex-direction: row; max-width: 90%; gap: 30px; }
+                    .lobby-arrows { scale: 0.8; margin: 0; }
+                    
+                    .action-circle { width: 180px; height: 180px; font-size: 2rem; }
+                    
+                    .boss-ui { flex-direction: row; align-items: center; gap: 40px; }
+                    .boss-header { width: 200px; }
+                    .boss-actions-grid { grid-template-columns: 1fr 1fr; width: 400px; }
+                    .boss-btn { height: 120px; }
+                    
+                    .shark-ui { flex-direction: row; gap: 40px; }
+                    .arrow-controls { margin: 0; scale: 0.8; }
+                    
+                    .racer-ui { flex-direction: row; justify-content: space-around; }
+                    .racer-controls { scale: 0.8; }
+                    
+                    .simon-grid { width: 220px; height: 220px; }
+                    
+                    .crab-ui { flex-direction: row; gap: 30px; }
+                    .dead-overlay h2 { font-size: 1.5rem; }
+                    
+                    .climb-ui { flex-direction: row; gap: 50px; }
+                    .climb-btn { width: 180px; height: 180px; }
+
+                    .rhythm-grid { grid-template-columns: 1fr 1fr 1fr 1fr; width: 90%; gap: 10px; }
+                    .rhythm-pad { height: 100px; }
+                    
+                    .memory-ui { flex-direction: row; gap: 50px; }
+                }
+
+                @media (max-height: 500px) {
+                    .controller-input { padding: 12px; font-size: 1.2rem; }
+                    .setup-panel { gap: 10px; padding: 20px; }
+                    .avatar-preview-box { width: 60px; height: 60px; }
+                }
             `}</style>
         </div>
     );

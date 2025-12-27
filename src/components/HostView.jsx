@@ -134,8 +134,14 @@ const HostView = ({ roomCode, user, setView }) => {
     updates[`rooms/${roomCode}/gameType`] = gameToStart;
     updates[`rooms/${roomCode}/gamePhase`] = 'starting';
     updates[`rooms/${roomCode}/startedAt`] = Date.now();
-    updates[`rooms/${roomCode}/bossHp`] = null;
-    updates[`rooms/${roomCode}/teamEnergy`] = null;
+
+    if (gameToStart === 'boss-battle') {
+      updates[`rooms/${roomCode}/bossHp`] = 1000;
+      updates[`rooms/${roomCode}/teamEnergy`] = 100;
+    } else {
+      updates[`rooms/${roomCode}/bossHp`] = null;
+      updates[`rooms/${roomCode}/teamEnergy`] = null;
+    }
 
     update(ref(db), updates);
   };
@@ -246,9 +252,11 @@ const HostView = ({ roomCode, user, setView }) => {
           </button>
         </div>
 
-        <div className="active-game-container" style={{ position: 'relative', zIndex: 10 }}>
+        <div className="active-game-container" key={gameType} style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%' }}>
           {gameType === 'boss-battle' ? (
-            <BossBattle players={players} roomCode={roomCode} onGameOver={handleGameOver} />
+            <div style={{ width: '100%', height: '100%' }}>
+              <BossBattle players={players} roomCode={roomCode} onGameOver={handleGameOver} />
+            </div>
           ) : (
             <>
               {gameType === 'fast-click' && <FastClick players={players} roomCode={roomCode} onGameOver={handleGameOver} />}
