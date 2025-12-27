@@ -7,7 +7,7 @@ import HostView from './components/HostView';
 import ControllerView from './components/ControllerView';
 import { Gamepad2, Users, Monitor, AlertCircle } from 'lucide-react';
 
-const VERSION = "v2.1.0";
+const VERSION = "v2.1.1";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
